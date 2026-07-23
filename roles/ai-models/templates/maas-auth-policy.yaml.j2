@@ -1,0 +1,13 @@
+apiVersion: maas.opendatahub.io/v1alpha1
+kind: MaaSAuthPolicy
+metadata:
+  name: {{ item.ai_model_id }}-policy
+  namespace: models-as-a-service
+spec:
+  modelRefs:
+    - name: {{ item.ai_model_id }}
+      namespace: llm-hosting
+  subjects:
+    groups:
+      - name: rhods-admins
+      - name: system:authenticated

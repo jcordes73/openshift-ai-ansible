@@ -1,0 +1,77 @@
+- name: Create OpenShift Storage Machineset
+  redhat.openshift.k8s:
+    template: openshift-storage-machineset.yaml.j2
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Wait until OpenShift Storage-Cluster MachineSet is available
+  kubernetes.core.k8s_info:
+    api_version: machine.openshift.io/v1beta1
+    kind: MachineSet
+    name: "{{ aws_infrastructure_id }}-storage-{{ aws_zone }}"
+    namespace: openshift-machine-api
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  register: machineset_storage
+  retries: 20
+  delay: 30
+  until: machineset_storage.resources[0].status.readyReplicas is defined and machineset_storage.resources[0].status.readyReplicas == 3
+- name: Create OpenShift Storage project
+  redhat.openshift.k8s:
+    src: openshift-storage-project.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Create OpenShift Storage Operator Group
+  redhat.openshift.k8s:
+    src: operator-group.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Create OpenShift Storage Subscription
+  redhat.openshift.k8s:
+    template: openshift-storage-sub.yaml.j2
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Wait until ODF subscription is "Ready"
+  redhat.openshift.k8s:
+    kind: Subscription
+    api_version: operators.coreos.com/v1alpha1
+    name: odf
+    namespace: openshift-storage
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  register: odf_sub
+  until: odf_sub.result.status.state is defined and (odf_sub.result.status.state == 'AtLatestKnown' or odf_sub.result.status.state == 'UpgradeAvailable')
+  retries: 12
+  delay: 10
+  ignore_errors: yes
+- name: Wait until ODF dependencies subscription is "Ready"
+  redhat.openshift.k8s:
+    kind: Subscription
+    api_version: operators.coreos.com/v1alpha1
+    name: odf-dependencies
+    namespace: openshift-storage
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  register: odf_dependencies_sub
+  until: odf_dependencies_sub.result.status.state is defined and (odf_dependencies_sub.result.status.state == 'AtLatestKnown' or odf_dependencies_sub.result.status.state == 'UpgradeAvailable')
+  retries: 12
+  delay: 10
+  ignore_errors: yes
+- name: Wait until OpenShift Storage-Cluster CRD is available
+  kubernetes.core.k8s_info:
+    api_version: apiextensions.k8s.io/v1
+    kind: CustomResourceDefinition
+    name: storageclusters.ocs.openshift.io
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  register: storagecluster_crd
+  retries: 200
+  delay: 10
+  until: storagecluster_crd.resources | list | length == 1

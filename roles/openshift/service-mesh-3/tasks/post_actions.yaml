@@ -1,0 +1,18 @@
+- name: Enable Istio Telemetry
+  redhat.openshift.k8s:
+    src: telemetry.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Enable Istio ServiceMonitor
+  redhat.openshift.k8s:
+    src: service-monitor.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Enable Istio PodMonitor
+  redhat.openshift.k8s:
+    src: pod-monitor.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false

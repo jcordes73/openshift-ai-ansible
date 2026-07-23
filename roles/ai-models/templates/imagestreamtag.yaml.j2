@@ -1,0 +1,30 @@
+apiVersion: image.openshift.io/v1
+kind: ImageStreamTag
+metadata:
+  name: {{ item.ai_model_id }}:latest
+  namespace: llm-hosting
+tag:
+  annotations: null
+  from:
+    kind: DockerImage
+    name: {{ item.ai_model_uri }}
+  generation: 1
+  importPolicy:
+    importMode: Legacy
+    scheduled: true
+  name: latest
+  referencePolicy:
+    type: Source
+generation: 0
+image:
+  dockerImageMetadata:
+    ContainerConfig: {}
+    Created: null
+    Id: ""
+    apiVersion: image.openshift.io/1.0
+    kind: DockerImage
+  dockerImageMetadataVersion: "1.0"
+  metadata:
+    creationTimestamp: null
+lookupPolicy:
+  local: false

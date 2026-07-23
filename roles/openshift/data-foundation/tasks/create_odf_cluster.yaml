@@ -1,0 +1,6 @@
+- name: Create OpenShift Storage Cluster
+  redhat.openshift.k8s:
+    template: openshift-storage-storagecluster.yaml.j2
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false

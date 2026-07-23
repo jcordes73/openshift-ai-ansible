@@ -1,0 +1,7 @@
+apiVersion: project.openshift.io/v1
+kind: Project
+metadata:
+  name: llm-hosting
+  labels:
+    kubernetes.io/metadata.name: llm-hosting
+#    modelmesh-enabled: 'false'

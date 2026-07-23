@@ -1,0 +1,18 @@
+kind: GrafanaDashboard
+apiVersion: grafana.integreatly.org/v1beta1
+metadata:
+  name: grafana-dashboard-{{ item }}
+  namespace: grafana
+  labels:
+    app: grafana
+spec:
+  instanceSelector:
+    matchLabels:
+      dashboards: grafana
+  folder: "Red Hat Connectivity Link"
+  datasources:
+    - datasourceName: prometheus
+      inputName: prometheus
+  configMapRef:
+    name: grafana-dashboard-{{ item }}
+    key: grafana-dashboard-{{ item }}.json

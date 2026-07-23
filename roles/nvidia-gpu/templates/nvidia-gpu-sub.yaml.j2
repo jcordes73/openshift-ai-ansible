@@ -1,0 +1,12 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: nvidia-gpu
+  namespace: nvidia-gpu-operator
+spec:
+  channel: "{{ nvidia_gpu_channel.stdout }}"
+  installPlanApproval: Manual
+  name: gpu-operator-certified
+  source: certified-operators
+  sourceNamespace: openshift-marketplace
+  startingCSV: "{{ nvidia_gpu_csv.stdout }}"

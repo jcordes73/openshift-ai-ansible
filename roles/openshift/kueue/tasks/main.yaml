@@ -1,0 +1,37 @@
+- name: Include OpenShift Common role
+  include_role:
+    name: openshift/common
+    public: true
+  when: openshift_token is undefined
+- name: Create OpenShift Kueue namespace
+  redhat.openshift.k8s:
+    src: namespace.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Create OpenShift Kueue operator-group
+  redhat.openshift.k8s:
+    src: operator-group.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Create OpenShift Kueue subscription
+  redhat.openshift.k8s:
+    src: kueue-sub.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Wait until OpenShift Kueue subscription is "Ready"
+  kubernetes.core.k8s_info:
+    kind: Subscription
+    api_version: operators.coreos.com/v1alpha1
+    name: kueue
+    namespace: openshift-kueue-operator
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  register: kueue_sub
+  until: kueue_sub.resources[0].status.state is defined and (kueue_sub.resources[0].status.state == 'AtLatestKnown' or kueue_sub.resources[0].status.state == 'UpgradeAvailable')
+  retries: 12
+  delay: 5
+  ignore_errors: yes

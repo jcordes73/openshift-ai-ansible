@@ -1,0 +1,47 @@
+- name: Create mcp-gateway namespace
+  redhat.openshift.k8s:
+    src: namespace.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Create mcp-gatewy operator-group
+  redhat.openshift.k8s:
+    src: operator-group.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Create MCP Gateway Subscription
+  redhat.openshift.k8s:
+    src: mcp-gateway-sub.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Get MCP Gateway subscription
+  redhat.openshift.k8s:
+    kind: Subscription
+    api_version: operators.coreos.com/v1alpha1
+    name: mcp-gateway
+    namespace: mcp-gateway
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  register: mcp_gw_sub
+  until: mcp_gw_sub.result.status.installplan.name is defined
+  retries: 12
+  delay: 10 
+- name: Approve InstallPlan
+  shell: |
+    oc patch installplan {{ mcp_gw_sub.result.status.installplan.name }} --namespace mcp-gateway --type merge --patch '{"spec":{"approved":true}}' -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
+- name: Wait until MCP Gateway subscription is "Ready"
+  redhat.openshift.k8s:
+    kind: Subscription
+    api_version: operators.coreos.com/v1alpha1
+    name: mcp-gateway
+    namespace: mcp-gateway
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  register: mcp_gw_sub
+  until: mcp_gw_sub.result.status.state is defined and (mcp_gw_sub.result.status.state == 'AtLatestKnown' or mcp_gw_sub.result.status.state == 'UpgradeAvailable')
+  retries: 12
+  delay: 5

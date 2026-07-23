@@ -1,0 +1,14 @@
+- name: Include openshift/common role
+  include_role:
+    name: openshift/common
+    public: true
+  when: openshift_token is undefined
+- name: Execute pre-actions
+  ansible.builtin.include_tasks:
+    file: pre_actions.yaml
+- name: Create NFD
+  ansible.builtin.include_tasks:
+    file: create_nfd.yaml
+- name: Execute post-actions
+  ansible.builtin.include_tasks:
+    file: post_actions.yaml

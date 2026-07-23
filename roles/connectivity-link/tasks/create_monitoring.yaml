@@ -1,0 +1,32 @@
+- name: Create Grafana Folder
+  redhat.openshift.k8s:
+    src: grafana-folder.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Create Grafana Dashboard {{ item }} Configmap
+  redhat.openshift.k8s:
+    template: grafana-dashboard-configmap.yaml.j2
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  loop:
+    - platform-engineer
+    - app-developer
+    - business-user
+    - controller-resources
+    - controller-runtime
+    - dns-operator
+- name: Create Grafana Dashboards
+  redhat.openshift.k8s:
+    template: grafana-dashboard.yaml.j2
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  loop:
+    - platform-engineer
+    - app-developer
+    - business-user
+    - controller-resources
+    - controller-runtime
+    - dns-operator

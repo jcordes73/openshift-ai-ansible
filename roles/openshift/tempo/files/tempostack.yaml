@@ -1,0 +1,21 @@
+apiVersion: tempo.grafana.com/v1alpha1
+kind: TempoStack
+metadata:
+  name: tempostack
+  namespace: tempo
+spec:
+  storageSize: 1Gi
+  storage:
+    secret:
+      name: tempo
+      type: s3
+  template:
+    queryFrontend:
+      jaegerQuery:
+        enabled: true
+        ingress:
+          route:
+            termination: edge
+          type: route
+
+

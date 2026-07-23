@@ -1,0 +1,12 @@
+- name: Create IstioCNI
+  redhat.openshift.k8s:
+    src: istio-cni.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Create Istio
+  redhat.openshift.k8s:
+    src: istio.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false

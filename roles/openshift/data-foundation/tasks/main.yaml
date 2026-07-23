@@ -1,0 +1,17 @@
+- name: Include OpenShift Common role
+  include_role:
+    name: openshift/common
+    public: true
+  when: openshift_token is undefined
+- name: Include OpenShift Data Foundation configuration
+  ansible.builtin.include_vars:
+    file: main.yaml
+- name: Execute pre-actions
+  ansible.builtin.include_tasks:
+    file: pre_actions.yaml
+- name: Create ODF cluster
+  ansible.builtin.include_tasks:
+    file: create_odf_cluster.yaml
+- name: Execute post-actions
+  ansible.builtin.include_tasks:
+    file: post_actions.yaml

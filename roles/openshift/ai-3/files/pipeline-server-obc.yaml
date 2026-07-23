@@ -1,0 +1,9 @@
+apiVersion: objectbucket.io/v1alpha1
+kind: ObjectBucketClaim
+metadata:
+  name: pipeline-server-obc
+  namespace: redhat-ods-applications
+spec:
+  ObjectBucketName: pipeline-server-obc
+  bucketName: pipeline-server
+  storageClassName: openshift-storage.noobaa.io

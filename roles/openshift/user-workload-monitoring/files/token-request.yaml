@@ -1,0 +1,9 @@
+apiVersion: authentication.k8s.io/v1
+kind: TokenRequest
+metadata:
+  name: grafana-sa
+  namespace: grafana
+spec:
+  audiences:
+  - https://kubernetes.default.svc
+  expirationSeconds: 31536000

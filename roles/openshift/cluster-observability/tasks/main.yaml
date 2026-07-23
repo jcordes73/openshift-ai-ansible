@@ -1,0 +1,37 @@
+- name: Include OpenShift Common role
+  include_role:
+    name: openshift/common
+    public: true
+  when: openshift_token is undefined
+- name: Create OpenShift Cluster Observability namespace
+  redhat.openshift.k8s:
+    src: namespace.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Create OpenShift Cluster Observability operator-group
+  redhat.openshift.k8s:
+    src: operator-group.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Create OpenShift Cluster Observabilitz subscription
+  redhat.openshift.k8s:
+    src: coo-sub.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Wait until OpenShift Cluster Observability subscription is "Ready"
+  kubernetes.core.k8s_info:
+    kind: Subscription
+    api_version: operators.coreos.com/v1alpha1
+    name: coo
+    namespace: openshift-cluster-observability-operator
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  register: coo_sub
+  until: coo_sub.resources[0].status.state is defined and (coo_sub.resources[0].status.state == 'AtLatestKnown' or coo_sub.resources[0].status.state == 'UpgradeAvailable')
+  retries: 12
+  delay: 5
+  ignore_errors: yes

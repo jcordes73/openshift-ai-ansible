@@ -1,0 +1,41 @@
+- name: Create API Gateway
+  redhat.openshift.k8s:
+    template: gateway-apis.yaml.j2
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Create TLS Policy
+  redhat.openshift.k8s:
+    template: tls-policy.yaml.j2
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Create DNS Policy for AWS
+  redhat.openshift.k8s:
+    src: dns-policy-aws.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  when: openshift_platform == 'AWS'
+- name: Create DNS Policy for CoreDNS
+  redhat.openshift.k8s:
+    src: dns-policy-coredns.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  when: openshift_platform == 'BareMetal'
+- name: Create Rate Limit Policy
+  redhat.openshift.k8s:
+    src: rate-limit-policy.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Create Default Auth Policy
+  redhat.openshift.k8s:
+    src: default-auth-policy.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Enable Connectivity Link Web Plugin
+  shell: |
+    oc patch consoles.operator.openshift.io cluster --type=json --patch '[{"op": "add", "path": "/spec/plugins/-", "value": "'"kuadrant-console-plugin"'"}]' -s {{ openshift_api_url }} --token={{ openshift_token }} --insecure-skip-tls-verify=true

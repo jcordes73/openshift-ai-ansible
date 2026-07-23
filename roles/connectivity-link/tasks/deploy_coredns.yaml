@@ -1,0 +1,52 @@
+- name: Create Kuadrant CoreDNS credentials secret
+  redhat.openshift.k8s:
+    template: coredns-credentials-secret.yaml.j2
+    namespace: "{{ item }}"
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  loop:
+    - cert-manager
+    - gateway-system
+- name: Create Kuadrant CoreDNS clusterrole
+  redhat.openshift.k8s:
+    src: kuadrant-coredns-clusterrole.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Create Kuadrant CoreDNS clusterrolebinding
+  redhat.openshift.k8s:
+    src: kuadrant-coredns-clusterrolebinding.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Create Kuadrant CoreDNS service
+  redhat.openshift.k8s:
+    src: kuadrant-coredns-service.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Create Kuadrant CoreDNS metrics service
+  redhat.openshift.k8s:
+    src: kuadrant-coredns-metrics-service.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Create Kuadrant CoreDNS configmap
+  redhat.openshift.k8s:
+    template: kuadrant-coredns-configmap.yaml.j2
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Create Kuadrant CoreDNS deployment
+  redhat.openshift.k8s:
+    src: kuadrant-coredns-deployment.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Create Kuadrant CoreDNS servicemonitor
+  redhat.openshift.k8s:
+    src: kuadrant-coredns-servicemonitor.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false

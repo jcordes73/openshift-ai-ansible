@@ -1,0 +1,21 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ item.name }}
+  namespace: mcp-gateway
+  labels:
+    mcp-server: 'true'
+spec:
+  parentRefs:
+    - name: mcp-gateway
+      namespace: openshift-ingress
+  hostnames:
+    - '{{ item.hostname }}'
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: {{ item.name }}
+          port: {{ item.port }} 

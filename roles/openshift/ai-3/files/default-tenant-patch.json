@@ -1,0 +1,13 @@
+{
+  "spec": {
+    "telemetry": {
+      "enabled": true,
+      "metrics": {
+        "captureOrganization": false,
+        "captureUser": true,
+        "captureGroup": false,
+        "captureModelUsage": true
+      }
+    }
+  }
+}

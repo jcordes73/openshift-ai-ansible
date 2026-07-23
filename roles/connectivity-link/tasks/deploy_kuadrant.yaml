@@ -1,0 +1,18 @@
+- name: Deploy Kuadrant
+  redhat.openshift.k8s:
+    src: kuadrant.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Wait for Kuadrant deployment
+  kubernetes.core.k8s_info:
+    api_version: kuadrant.io/v1beta1
+    kind: Kuadrant
+    namespace: kuadrant-system
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  register: kuadrant_deployment
+  until: kuadrant_deployment.resources[0].status.conditions[0].status is defined and kuadrant_deployment.resources[0].status.conditions[0].status == 'True'
+  retries: 12
+  delay: 10

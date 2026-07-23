@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-{{ item }}
+  namespace: grafana
+data:
+  grafana-dashboard-{{ item }}.json: |
+    {{ lookup('file',role_path + '/files/grafana-dashboard-' + item + '.json') | indent(4) }}

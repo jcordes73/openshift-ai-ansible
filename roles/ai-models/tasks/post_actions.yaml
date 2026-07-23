@@ -1,0 +1,3 @@
+- name: Make model access "view only" for all authenticated users
+  shell: |
+    oc adm policy add-role-to-group view system:authenticated -n llm-hosting -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true

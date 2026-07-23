@@ -1,0 +1,44 @@
+- name: Include openshift/common role
+  include_role:
+    name: openshift/common
+    public: true
+  when: openshift_token is undefined
+- name: Create OpenShift LWS Operator namespace
+  redhat.openshift.k8s:
+    src: namespace.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Create Operator Group
+  redhat.openshift.k8s:
+    src: operator-group.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Create OpenShift LWS Subscription
+  redhat.openshift.k8s:
+    src: lws-sub.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Wait until OpenShift LWS subscription is "Ready"
+  redhat.openshift.k8s:
+    kind: Subscription
+    api_version: operators.coreos.com/v1alpha1
+    name: lws
+    namespace: openshift-lws-operator
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  register: lws_sub
+  until: lws_sub.result.status.state is defined and (lws_sub.result.status.state == 'AtLatestKnown' or lws_sub.result.status.state == 'UpgradeAvailable')
+  retries: 12
+  delay: 5
+  ignore_errors: yes
+- name: Create OpenShift LWS
+  redhat.openshift.k8s:
+    src: lws.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+

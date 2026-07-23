@@ -1,0 +1,33 @@
+apiVersion: grafana.integreatly.org/v1beta1
+kind: Grafana
+metadata:
+  name: grafana
+  namespace: grafana
+  labels:
+    dashboards: "grafana"
+spec:
+  client:
+    preferService: "true"
+  ingress:
+    enabled: "true"
+    pathType: Prefix
+    path: "/"
+  config:
+    log:
+      mode: "console"
+      level: "info"
+    log.frontend:
+      enabled: "true"
+    auth:
+      disable_login_form: "false"
+      disable_signout_menu: "true"
+    auth.anonymous:
+      enabled: "true"
+    security:
+      admin_user: admin
+      admin_password: admin
+  service:
+    name: "grafana-service"
+    labels:
+      app: "grafana"
+      type: "grafana-service"

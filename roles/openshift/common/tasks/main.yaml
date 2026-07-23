@@ -1,0 +1,88 @@
+- name: Set OpenShift API URL, admin and password
+  set_fact:
+    openshift_api_url: "{{ api_url }}"
+    openshift_admin: "{{ admin }}"
+    openshift_password: "{{ password }}"
+- name: Create OpenShift Token
+  redhat.openshift.openshift_auth:
+    host: "{{ openshift_api_url }}"
+    username: "{{ openshift_admin }}"
+    password: "{{ openshift_password }}"
+    validate_certs: false
+  register: openshift_auth_results
+- name: Set facts
+  set_fact:
+    openshift_token: "{{ openshift_auth_results.openshift_auth.api_key }}"
+- name: Get Apps Domain
+  kubernetes.core.k8s_info:
+    kind: IngressController
+    api_version: operator.openshift.io/v1
+    name: default
+    namespace: openshift-ingress-operator
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  register: ingress_controller
+- name: Get Platform
+  kubernetes.core.k8s_info:
+    kind: Infrastructure
+    api_version: config.openshift.io/v1
+    name: cluster
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"  
+    validate_certs: false
+  register: openshift_platform
+- name: Get Pull Secret
+  shell: "cat {{ playbook_dir }}/pull_secret.json"
+  register: pull_secret_stdout
+- set_fact:
+    openshift_apps_domain: "{{ ingress_controller.resources[0].status.domain }}"
+    openshift_platform: "{{ openshift_platform.resources[0].spec.platformSpec.type }}"
+    pull_secret: "{{ pull_secret_stdout.stdout | tojson }}"
+- name: Get AWS Credentials
+  kubernetes.core.k8s_info:
+    kind: Secret
+    api_version: v1
+    name: aws-creds
+    namespace: kube-system
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  register: aws_credentials_kube_system
+  when: openshift_platform == 'AWS'
+- name: Get AWS Credentials
+  kubernetes.core.k8s_info:
+    kind: Secret
+    api_version: v1
+    name: cert-manager-aws-creds
+    namespace: cert-manager
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  register: aws_credentials_cert_manager
+  when: openshift_platform == 'AWS' and aws_credentials.resources[0].data is undefined
+- name: Get AWS Infrastructure ID
+  kubernetes.core.k8s_info:
+    kind: MachineSet
+    api_version: machine.openshift.io/v1beta1
+    namespace: openshift-machine-api
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  register: aws_machineset
+  when: openshift_platform == 'AWS'
+- set_fact:
+    aws_access_key_id: "{{ aws_credentials_kube_system.resources[0].data.aws_access_key_id | b64decode }}"
+    aws_secret_access_key: "{{ aws_credentials_kube_system.resources[0].data.aws_secret_access_key | b64decode }}"
+  when: openshift_platform == 'AWS' and aws_credentials_kube_system.resources is defined and aws_credentials_cert_manager.resources is undefined
+- set_fact:
+    aws_access_key_id: "{{ aws_credentials_cert_manager.resources[0].data.aws_access_key_id | b64decode }}"
+    aws_secret_access_key: "{{ aws_credentials_cert_manager.resources[0].data.aws_secret_access_key | b64decode }}"
+  when: openshift_platform == 'AWS' and aws_credentials_cert_manager is defined
+- set_fact:
+    aws_infrastructure_id: "{{ aws_machineset.resources[0].metadata.labels['machine.openshift.io/cluster-api-cluster'] }}"
+    aws_zone: "{{ aws_machineset.resources[0].spec.template.spec.providerSpec.value.placement.availabilityZone }}"
+    aws_region: "{{ aws_machineset.resources[0].spec.template.spec.providerSpec.value.placement.region }}"
+    aws_guid: "{{ aws_machineset.resources[0].spec.template.spec.providerSpec.value.tags | json_query(\"[?name=='guid'].value | [0]\") }}"
+    aws_uuid: "{{ aws_machineset.resources[0].spec.template.spec.providerSpec.value.tags | json_query(\"[?name=='uuid'].value | [0]\") }}"
+    aws_ami: "{{ aws_machineset.resources[0].spec.template.spec.providerSpec.value.ami.id }}"

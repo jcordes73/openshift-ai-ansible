@@ -1,0 +1,98 @@
+apiVersion: serving.kserve.io/v1alpha1
+kind: LLMInferenceService
+metadata:
+  name: {{ item.ai_model_id }}
+  namespace: llm-hosting
+  annotations:
+    opendatahub.io/connections: modelcar-catalog-connection
+    opendatahub.io/genai-use-case: {{ item.ai_model_use_case }} 
+    opendatahub.io/hardware-profile-name: default-profile
+    opendatahub.io/hardware-profile-namespace: redhat-ods-applications
+    opendatahub.io/model-type: generative
+    openshift.io/display-name: {{ item.ai_model_id }}
+    security.opendatahub.io/enable-auth: "true"
+  labels:
+    opendatahub.io/dashboard: "true"
+    opendatahub.io/genai-asset: "true"
+spec:
+  model:
+    uri: oci://{{ item.ai_model_uri }}
+    name: {{ item.ai_model_id }}
+  replicas: 1
+  router:
+    route: {}
+    gateway:
+      refs:
+        - name: maas-default-gateway
+          namespace: openshift-ingress
+  template:
+    tolerations:
+      - key: "nvidia.com/gpu"
+        operator: "Equal"
+        value: "true"
+        effect: "NoSchedule"
+      - key: "nvidia.com/gpu.product"
+        operator: "Equal"
+        value: "{{ aws_nvidia_gpu_nodes | selectattr('size','equalto', item.ai_model_size ) | map(attribute='product') | list | first }}"
+        effect: "NoSchedule"
+    containers:
+      - name: main
+        image: {{ item.ai_runtime_uri }}
+        imagePullPolicy: IfNotPresent
+{% if item.ai_model_command is defined %}
+        command:
+{% for commandArg in item.ai_model_command %}
+          - {{ commandArg }}
+{% endfor %}
+{% endif %}
+{% if item.ai_model_command_args is defined %}
+{% for commandArg in item.ai_model_command_args %}
+        args:
+          - '{{ commandArg }}'
+{% endfor %}
+{% endif %}
+{% if item.ai_model_env is defined %} 
+        env:
+{% for modelEnv in item.ai_model_env %}
+          - name: {{ modelEnv.name }}
+            value: "{{ modelEnv.value  }}"
+{% endfor %}
+{% endif %}
+        resources:
+          requests:
+            cpu: "{{ item.ai_model_cpu_requests }}"
+            memory: {{ item.ai_model_memory_requests }} 
+            nvidia.com/gpu: '1'
+          limits:
+            cpu: "{{ item.ai_model_cpu_limits }}"
+            memory: {{ item.ai_model_memory_limits }}
+            nvidia.com/gpu: '1'
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: {{ item.ai_model_probe_port }}
+            scheme: {{ item.ai_model_probe_scheme }}
+          initialDelaySeconds: 300
+          periodSeconds: 30
+          timeoutSeconds: 30
+          failureThreshold: 5
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: {{ item.ai_model_probe_port }}
+            scheme: {{ item.ai_model_probe_scheme }}
+          initialDelaySeconds: 300
+          periodSeconds: 15
+          timeoutSeconds: 15
+          failureThreshold: 30
+        startupProbe:
+            httpGet:
+              path: /health
+              port: {{ item.ai_model_probe_port }}
+              scheme: {{ item.ai_model_probe_scheme }}
+            timeoutSeconds: 1
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 60
+    imagePullSecrets:
+      - name: modelcar-catalog-connection

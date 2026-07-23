@@ -1,0 +1,27 @@
+- name: Include OpenShift Common role
+  include_role:
+    name: openshift/common
+    public: true
+- name: Execute pre-actions
+  ansible.builtin.include_tasks:
+    file: pre_actions.yaml
+- name: Create Monitoring
+  ansible.builtin.include_tasks:
+    file: create_monitoring.yaml
+- name: Deploy Kuadrant
+  ansible.builtin.include_tasks:
+    file: deploy_kuadrant.yaml
+- name: Create Cluster Certificate Issuer
+  ansible.builtin.include_tasks:
+    file: create_cluster_certificate_issuer.yaml
+- name: Create AWS Credentials
+  ansible.builtin.include_tasks:
+    file: create_aws_credentials.yaml
+  when: openshift_platform == 'AWS'
+- name: Create Cluster CoreDNS
+  ansible.builtin.include_tasks:
+    file: create_coredns.yaml
+  when: openshift_platform == 'BareMetal'
+- name: Execute post-actions
+  ansible.builtin.include_tasks:
+    file: post_actions.yaml

@@ -1,0 +1,18 @@
+apiVersion: ols.openshift.io/v1alpha1
+kind: OLSConfig
+metadata:
+  name: cluster
+spec:
+  llm:
+    providers:
+      - name: OpenAI
+        type: openai
+        credentialsSecretRef:
+          name: credentials
+        url: https://{{ openshift_lightspeed_model_name }}-predictor.llm-hosting.svc.cluster.local/v1
+        models:
+          - name: {{ openshift_lightspeed_model_name }} 
+  ols:
+    defaultModel: {{ openshift_lightspeed_model_name }}
+    defaultProvider: OpenAI
+    introspectionEnabled: true

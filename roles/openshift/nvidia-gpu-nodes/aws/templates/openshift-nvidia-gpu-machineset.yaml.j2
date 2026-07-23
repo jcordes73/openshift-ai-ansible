@@ -1,0 +1,82 @@
+apiVersion: machine.openshift.io/v1beta1
+kind: MachineSet
+metadata:
+  labels:
+    machine.openshift.io/cluster-api-cluster: {{ aws_infrastructure_id }}
+  name: {{ aws_infrastructure_id }}-nvidia-gpu-{{ item }}-{{ aws_zone }}
+  namespace: openshift-machine-api
+spec:
+  replicas: {{ ai_models | selectattr('ai_model_id','in', ai_models_enabled) | selectattr('ai_model_size','equalto', item) | length }}
+  selector:
+    matchLabels:
+      machine.openshift.io/cluster-api-cluster: {{ aws_infrastructure_id }}
+      machine.openshift.io/cluster-api-machineset: {{ aws_infrastructure_id }}-nvidia-gpu-{{ item }}-{{ aws_zone }}
+  template:
+    metadata:
+      labels:
+        machine.openshift.io/cluster-api-cluster: {{ aws_infrastructure_id }}
+        machine.openshift.io/cluster-api-machine-role: nvidia-gpu
+        machine.openshift.io/cluster-api-machine-type: nvidia-gpu
+        machine.openshift.io/cluster-api-machineset: {{ aws_infrastructure_id }}-nvidia-gpu-{{ item }}-{{ aws_zone }}
+    spec:
+      metadata:
+        labels:
+          node-role.kubernetes.io/worker: ""
+      taints:
+        - effect: "NoSchedule"
+          key: "nvidia.com/gpu"
+          value: "true" 
+        - effect: "NoSchedule"
+          key: "nvidia.com/gpu.product"
+          value: "{{ aws_nvidia_gpu_nodes | selectattr('size','equalto', item ) | map(attribute='product') | list | first }}"
+      providerSpec:
+        value:
+          ami:
+            id: {{ aws_ami }}
+          apiVersion: machine.openshift.io/v1beta1
+          blockDevices:
+            - ebs:
+                iops: 0
+                volumeSize: 512
+                volumeType: gp2
+          credentialsSecret:
+            name: aws-cloud-credentials
+          deviceIndex: 0
+          iamInstanceProfile:
+            id: {{ aws_infrastructure_id }}-worker-profile
+          instanceType: {{ aws_nvidia_gpu_nodes | selectattr('size','equalto', item ) | map(attribute='instance') | list | first }}
+          kind: AWSMachineProviderConfig
+          placement:
+            availabilityZone: {{ aws_zone }}
+            region: {{ aws_region }}
+          securityGroups:
+            - filters:
+                - name: tag:Name
+                  values:
+                    - {{ aws_infrastructure_id }}-node
+            - filters:
+                - name: tag:Name
+                  values:
+                    - {{ aws_infrastructure_id }}-lb
+          subnet:
+            filters:
+              - name: tag:Name
+                values:
+                  - {{ aws_infrastructure_id }}-subnet-private-{{ aws_zone }}
+          tags:
+            - name: kubernetes.io/cluster/{{ aws_infrastructure_id }}
+              value: owned
+            - name: Stack
+              value: ocp4-cluster-{{ aws_guid }}
+            - name: env_type
+              value: ocp4-cluster
+            - name: guid
+              value: {{ aws_guid }}
+            - name: owner
+              value: unknown
+            - name: platform
+              value: rhpds
+            - name: uuid
+              value: {{ aws_uuid }}
+          userDataSecret:
+            name: worker-user-data

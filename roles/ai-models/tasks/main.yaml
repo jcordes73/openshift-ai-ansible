@@ -1,0 +1,19 @@
+- name: Include OpenShift Common
+  include_role:
+    name: openshift/common
+    public: true
+- name: Include AI model configuration
+  ansible.builtin.include_vars:
+    file: ai_models.yaml
+- name: Include AWS GPU instance types
+  ansible.builtin.include_vars:
+    file: "{{ role_path }}/../openshift/nvidia-gpu-nodes/aws/vars/nvidia_gpu_nodes.yaml"
+- name: Execute pre-actions
+  ansible.builtin.include_tasks:
+    file: pre_actions.yaml
+- name: Deploy models
+  ansible.builtin.include_tasks:
+    file: deploy_models.yaml
+- name: Execute post-actions
+  ansible.builtin.include_tasks:
+    file: post_actions.yaml

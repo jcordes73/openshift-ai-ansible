@@ -1,0 +1,15 @@
+- name: Include OpenShift Common role
+  include_role:
+    name: openshift/common
+    public: true
+- name: Include OpenShift Lightspeed configuration variables
+  ansible.builtin.include_vars:
+    file: main.yaml
+- name: Execute pre-actions
+  ansible.builtin.include_tasks:
+    file: pre_actions.yaml
+- name: Create OpenShift Lightspeed Configuration
+  redhat.openshift.k8s:
+    template: openshift-lightspeed.yaml.j2
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"

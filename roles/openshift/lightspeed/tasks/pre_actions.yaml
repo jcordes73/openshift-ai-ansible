@@ -1,0 +1,34 @@
+- name: Create openshift-lightspeed namespace
+  redhat.openshift.k8s:
+    src: namespace.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Create Operator Group
+  redhat.openshift.k8s:
+    src: operator-group.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+- name: Create OpenShift Lighspeed subscription
+  redhat.openshift.k8s:
+    src: openshift-lightspeed-sub.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+- name: Wait until OpenShift Lightspeed subscription is "Ready"
+  redhat.openshift.k8s:
+    kind: Subscription
+    api_version: operators.coreos.com/v1alpha1
+    name: openshift-lightspeed
+    namespace: openshift-gitops-operator
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+  register: openshift_lighspeed_sub
+  until: openshift_lighspeed_sub.result.status.state is defined and (openshift_lighspeed_sub.result.status.state == 'AtLatestKnown' or openshift_lightspeed_sub.result.status.state == 'UpgradeAvailable')
+  retries: 12
+  delay: 5
+  ignore_errors: yes
+- name: Create OpenShift Lightspeed Credential secret
+  redhat.openshift.k8s:
+    template: openshift-lightspeed-credential.yaml.j2
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"

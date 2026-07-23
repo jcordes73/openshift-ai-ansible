@@ -1,0 +1,4 @@
+# OpenShift Data Foundation
+odf_version: "4.20"
+storage_aws_type: m6a.4xlarge
+storage_aws_storage_class: gp3-csi

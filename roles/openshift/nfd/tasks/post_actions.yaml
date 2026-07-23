@@ -1,0 +1,13 @@
+- name: Wait until NFD is available
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: NodeFeatureDiscovery
+    name: nfd-instance
+    namespace: openshift-nfd
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  register: nfd
+  until: nfd.resources[0].status.conditions is defined and ( nfd.resources[0].status.conditions | json_query("[?type=='Available'].status")  | select("match","True") | list | length == 1)
+  retries: 12
+  delay: 10

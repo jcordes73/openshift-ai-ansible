@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: openshift-lightspeed
+  labels:
+    name: openshift-lightspeed
+    openshift.io/cluster-monitoring: "true"

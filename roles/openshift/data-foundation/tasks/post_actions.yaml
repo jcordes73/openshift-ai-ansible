@@ -1,0 +1,16 @@
+- name: Check OpenShift Storage Cluster
+  redhat.openshift.k8s:
+    kind: StorageCluster
+    api_version: ocs.openshift.io/v1
+    name: ocs-storagecluster
+    namespace: openshift-storage
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  register: storagecluster
+  until: storagecluster.result.status.phase is defined and storagecluster.result.status.phase == "Ready"
+  retries: 40
+  delay: 30
+- name: Enable Storage Console plugin
+  shell: |
+    oc patch console.operator cluster -n openshift-storage --type json -p '[{"op": "add", "path": "/spec/plugins", "value": ["odf-console"]}]' -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true

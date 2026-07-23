@@ -1,0 +1,232 @@
+- name: Include openshift/common role
+  include_role:
+    name: openshift/common
+    public: true
+  when: openshift_token is undefined
+- name: Create OpenShift AI Operator namespace
+  redhat.openshift.k8s:
+    src: operator-namespace.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Create OpenShift AI Application namespace
+  redhat.openshift.k8s:
+    src: applications-namespace.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Create OpenShift AI Workbench namespace
+  redhat.openshift.k8s:
+    src: workbench-namespace.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Create Operator Group
+  redhat.openshift.k8s:
+    src: operator-group.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Create OpenShift AI Subscription
+  redhat.openshift.k8s:
+    template: ai-sub.yaml.j2
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Wait until OpenShift AI subscription is "Ready"
+  redhat.openshift.k8s:
+    kind: Subscription
+    api_version: operators.coreos.com/v1alpha1
+    name: rhods
+    namespace: redhat-ods-operator
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  register: rhods_sub
+  until: rhods_sub.result.status.state is defined and (rhods_sub.result.status.state == 'AtLatestKnown' or rhods_sub.result.status.state == 'UpgradeAvailable')
+  retries: 12
+  delay: 5
+  ignore_errors: yes
+- name: Wait for OpenShift AI Operator
+  kubernetes.core.k8s_info:
+    api_version: apps/v1
+    kind: Deployment
+    name: rhods-operator
+    namespace: redhat-ods-operator
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  register: rhods_operator
+  retries: 12
+  delay: 10
+  until: rhods_operator.resources[0].status.readyReplicas is defined and rhods_operator.resources[0].status.readyReplicas == rhods_operator.resources[0].status.replicas
+- name: Wait until DataScienceCluster CRD is available
+  kubernetes.core.k8s_info:
+    api_version: apiextensions.k8s.io/v1
+    kind: CustomResourceDefinition
+    name: datascienceclusters.datasciencecluster.opendatahub.io
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  register: dsc_crd
+  retries: 200
+  delay: 10
+  until: dsc_crd.resources | list | length == 1
+- name: Create OpenShift AI Data Science Cluster
+  redhat.openshift.k8s:
+    src: datasciencecluster.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Wait until OdhDashboardConfig CRD is available
+  kubernetes.core.k8s_info:
+    api_version: apiextensions.k8s.io/v1
+    kind: CustomResourceDefinition
+    name: odhdashboardconfigs.opendatahub.io
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  register: odhdashboardconfig_crd
+  retries: 200
+  delay: 10
+  until: odhdashboardconfig_crd.resources | list | length == 1
+- name: Wait until OdhDashboardConfig is available
+  kubernetes.core.k8s_info:
+    api_version: opendatahub.io/v1alpha
+    kind: OdhDashboardConfig
+    name: odh-dashboard-config
+    namespace: redhat-ods-applications
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  register: odhdashboardconfig
+  retries: 12
+  delay: 10
+  until: odhdashboardconfig.resources[0] is defined
+- name: Enable TLS
+  shell: |
+    oc patch dscinitialization default-dsci -n redhat-ods-applications --type merge --patch '{"spec":{"listener":{"tls":{"enabled": true,"certSecretRef": {"name": "authorino-server-cert"}}}}}' -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
+- name: Enable monitoring
+  shell: |
+    oc patch dscinitialization default-dsci --type=merge --patch-file={{ role_path }}/files/dsc-initialization-monitoring-patch.yaml -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
+- name: Create MLFlow instance
+  redhat.openshift.k8s:
+    src: mlflow.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Check if Postgres is already deployed
+  kubernetes.core.k8s_info:
+    api_version: apps.openshift.io/v1
+    kind: DeploymentConfig
+    name: postgres
+    namespace: redhat-ods-applications
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  register: postgres_deployment
+- name: Deploy Postgres
+  shell: |
+    oc new-app postgresql-persistent --name=postgres -p DATABASE_SERVICE_NAME=postgres -p POSTGRESQL_USER=postgres -p POSTGRESQL_PASSWORD=postgres -p POSTGRESQL_DATABASE=maas -p POSTGRESQL_VERSION=13-el8 -p VOLUME_CAPACITY=5Gi -n redhat-ods-applications -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
+  when: postgres_deployment.resources[0] is not defined
+- name: Create Postgres TLS Configmap for Service CA certificate
+  redhat.openshift.k8s:
+    src: postgres-tls-configmap.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Create Postgres TLS Config Configmap
+  redhat.openshift.k8s:
+    template: postgres-tls-config-configmap.yaml.j2
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Create Postgres TLS Service
+  shell: |
+    oc annotate service postgres service.beta.openshift.io/serving-cert-secret-name=postgres-tls -n redhat-ods-applications -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
+- name: Mount Postgres TLS certificates and config
+  shell: |
+    oc set volume dc/postgres --name=tls --add --overwrite --secret-name=postgres-tls --mount-path=/opt/app-root/src/certificates --read-only --default-mode=0600 -n redhat-ods-applications -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
+    oc set volume dc/postgres --name=service-ca --add --overwrite --configmap-name=postgres-tls --mount-path=/opt/app-root/src/trusted-ca --read-only --default-mode=0600 -n redhat-ods-applications -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
+    oc set volume dc/postgres --name=tls-config --add --overwrite --configmap-name=postgres-tls-config --mount-path=/opt/app-root/src/postgresql-cfg -n redhat-ods-applications -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
+- name: Create MaaS DB Config Secret
+  redhat.openshift.k8s:
+    src: maas-db-config-secret.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Authorino TLS creation
+  shell: |
+    oc annotate service authorino-authorino-authorization -n kuadrant-system service.beta.openshift.io/serving-cert-secret-name=authorino-server-cert  --overwrite -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
+- name: Patch Authorina TLS listener
+  shell: |
+    oc patch authorino authorino -n kuadrant-system --type merge --patch '{"spec":{"listener":{"tls":{"enabled": true,"certSecretRef": {"name": "authorino-server-cert"}}}}}' -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
+- name: Patch Authorina TLS listener
+  shell: |
+    oc -n kuadrant-system set env deployment/authorino SSL_CERT_FILE=/etc/ssl/certs/openshift-service-ca/service-ca-bundle.crt REQUESTS_CA_BUNDLE=/etc/ssl/certs/openshift-service-ca/service-ca-bundle.crt -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
+- name: Create MaaS Gateway
+  redhat.openshift.k8s:
+    template: gateway-maas.yaml.j2
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Set MAAS API URL in the Dashboard
+  shell: |
+    oc set env deployment/rhods-dashboard --containers='*' MAAS_API_URL=https://maas.{{ openshift_apps_domain }}/maas-api -n redhat-ods-applications -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
+- name: Enable Model Catalog
+  shell: |
+    oc patch odhdashboardconfig odh-dashboard-config -n redhat-ods-applications --type merge --patch '{"spec":{"dashboardConfig":{"disableModelCatalog": false }}}' -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
+- name: Enable GenAI Studio
+  shell: |
+    oc patch odhdashboardconfig odh-dashboard-config -n redhat-ods-applications --type merge --patch '{"spec":{"dashboardConfig":{"genAiStudio": true }}}' -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
+- name: Enable MaaS
+  shell: |
+    oc patch odhdashboardconfig odh-dashboard-config -n redhat-ods-applications --type merge --patch '{"spec":{"dashboardConfig":{"modelAsService": true }}}' -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
+- name: Enable MaaS
+  shell: |
+    oc patch odhdashboardconfig odh-dashboard-config -n redhat-ods-applications --type merge --patch '{"spec":{"dashboardConfig":{"vLLMDeploymentOnMaaS": true }}}' -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
+- name: Enable MaaS Auth Policy
+  shell: |
+    oc patch odhdashboardconfig odh-dashboard-config -n redhat-ods-applications --type merge --patch '{"spec":{"dashboardConfig":{"maasAuthPolicies": true }}}' -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
+- name: Enable MaaS Observability Dashboard
+  shell: |
+    oc patch odhdashboardconfig odh-dashboard-config -n redhat-ods-applications --type merge --patch '{"spec":{"dashboardConfig":{"observabilityDashboard": true }}}' -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
+- name: Create MCP servers
+  redhat.openshift.k8s:
+    template: mcp-servers.yaml.j2
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Check kserve controller deployment
+  kubernetes.core.k8s_info:
+    api_version: v1 
+    kind: Deployment
+    name: kserve-controller-manager
+    namespace: redhat-ods-applications
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  register: kserve_deployment
+  until: kserve_deployment.resources[0].status.readyReplicas is defined and kserve_deployment.resources[0].status.readyReplicas == 1
+  retries: 20 
+  delay: 30
+- name: Add admin to rhods-admins group
+  shell: |
+    oc adm groups add-users rhods-admins admin -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
+  ignore_errors: true
+- name: Patch MaaS default-tenant
+  shell: |
+    oc patch tenants.maas.opendatahub.io default-tenant -n models-as-a-service --type merge --patch-file={{ role_path }}/files/default-tenant-patch.json  -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
+- name: Check MaaS TelemetryPolicy
+  kubernetes.core.k8s_info:
+    api_version: extensions.kuadrant.io/v1alpha1
+    kind: TelemetryPolicy
+    name: maas-telemetry
+    namespace: openshift-ingress
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  register: maas_telemetry_policy
+  until: maas_telemetry_policy.resources[0].status.conditions is defined
+  retries: 20  
+  delay: 30

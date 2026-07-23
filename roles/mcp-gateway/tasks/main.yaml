@@ -1,0 +1,13 @@
+- name: Include Connectivity Link
+  include_role:
+    name: connectivity-link
+    public: true
+- name: Execute pre-actions
+  ansible.builtin.include_tasks:
+    file: pre_actions.yaml
+- name: Deploy MCP Gateway
+  ansible.builtin.include_tasks:
+    file: deploy_mcp_gateway.yaml
+- name: Execute post-actions
+  ansible.builtin.include_tasks:
+    file: post_actions.yaml

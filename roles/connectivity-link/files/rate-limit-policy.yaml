@@ -1,0 +1,16 @@
+apiVersion: kuadrant.io/v1
+kind: RateLimitPolicy
+metadata:
+  name: apis
+  namespace: gateway-system
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: apis
+  defaults:
+    limits:
+      "low-limit":
+        rates:
+        - limit: 1
+          window: 10s

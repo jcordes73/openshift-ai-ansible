@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Secret
+type: kubernetes.io/dockerconfigjson
+metadata:
+  annotations:
+    opendatahub.io/connection-type-ref: oci-v1
+    openshift.io/description: ""
+    openshift.io/display-name: modelcar-catalog-connection
+  labels:
+    opendatahub.io/dashboard: "true"
+  name: modelcar-catalog-connection
+  namespace: llm-hosting
+stringData:
+  .dockerconfigjson: {{ pull_secret }}
+  ACCESS_TYPE: '["Pull"]'
+  OCI_HOST: 'quay.io'

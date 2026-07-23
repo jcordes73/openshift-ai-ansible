@@ -1,0 +1,9 @@
+apiVersion: maas.opendatahub.io/v1alpha1
+kind: MaaSModelRef
+metadata:
+  name: {{ item.ai_model_id }}
+  namespace: llm-hosting
+spec: 
+  modelRef:
+    kind: LLMInferenceService
+    name: {{ item.ai_model_id }}

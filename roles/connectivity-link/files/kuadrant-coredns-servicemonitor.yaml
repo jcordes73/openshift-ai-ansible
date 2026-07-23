@@ -1,0 +1,19 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    app.kubernetes.io/instance: kuadrant
+    app.kubernetes.io/name: coredns
+  name: kuadrant-coredns
+  namespace: kuadrant-coredns
+spec:
+  endpoints:
+    - port: metrics
+  namespaceSelector:
+    matchNames:
+      - kuadrant-coredns
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: metrics
+      app.kubernetes.io/instance: kuadrant
+      app.kubernetes.io/name: coredns

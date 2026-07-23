@@ -1,0 +1,7 @@
+aws_nvidia_gpu_nodes:
+  - size: medium
+    instance: g6.4xlarge
+    product: NVIDIA-L4
+  - size: large
+    instance: g6e.2xlarge
+    product: NVIDIA-L40S

@@ -1,0 +1,14 @@
+- name: Check if Postgres is already deployed
+  kubernetes.core.k8s_info:
+    api_version: apps.openshift.io/v1
+    kind: DeploymentConfig
+    name: postgres
+    namespace: postgres
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  register: postgres_deployment
+- name: Deploy Postgres
+  shell: |
+    oc new-app postgresql-persistent -p DATABASE_SERVICE_NAME=postgres -p POSTGRESQL_USER=postgres -p POSTGRESQL_PASSWORD=postgres -p POSTGRESQL_DATABASE=postgres -p POSTGRESQL_VERSION=13-el8 -p VOLUME_CAPACITY=5Gi -n postgres -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
+  when: postgres_deployment.resources[0] is not defined

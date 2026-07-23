@@ -1,0 +1,8 @@
+apiVersion: objectbucket.io/v1alpha1
+kind: ObjectBucketClaim
+metadata:
+  name: tempostack-obc
+  namespace: tempo
+spec:
+  generateBucketName: tempo
+  storageClassName: openshift-storage.noobaa.io

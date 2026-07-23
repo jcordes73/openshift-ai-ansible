@@ -1,0 +1,73 @@
+ai_models:
+- ai_model: granite-3.3-8b-instruct
+  ai_model_description: "Granite 3.3 8b instruct"
+  ai_model_id: granite-3-3-8b-instruct
+  ai_model_use_case: chat
+  ai_model_uri: "quay.io/telco-coe-emea/modelcar-catalog:granite-3.3-8b-instruct"
+  ai_runtime_uri: "registry.redhat.io/rhaiis/vllm-cuda-rhel9:3.3"
+  ai_model_size: medium
+  ai_model_env:
+    - name: VLLM_ADDITIONAL_ARGS
+      value: "--max-model-len=14448 --distributed-executor-backend=mp --dtype=half --enable-auto-tool-choice --tool-call-parser=granite"
+  ai_model_cpu_requests: 4
+  ai_model_memory_requests: "8Gi"
+  ai_model_cpu_limits: 8
+  ai_model_memory_limits: "10Gi"
+  ai_model_probe_port: 8000
+  ai_model_probe_scheme: HTTPS
+- ai_model: granite-8b-code-instruct
+  ai_model_description: "Granite 8b code instruct"
+  ai_model_id: granite-8b-code-instruct
+  ai_model_use_case: coding
+  ai_model_uri: "quay.io/telco-coe-emea/modelcar-catalog:granite-8b-code-instruct-128k"
+  ai_runtime_uri: "registry.redhat.io/rhaiis/vllm-cuda-rhel9:3.3"
+  ai_model_size: medium
+  ai_model_env:
+    - name: VLLM_ADDITIONAL_ARGS
+      value: "--max-model-len=30000 --distributed-executor-backend=mp --dtype=half --enable-auto-tool-choice --tool-call-parser=granite"
+  ai_model_cpu_requests: 4
+  ai_model_memory_requests: "8Gi"
+  ai_model_cpu_limits: 8
+  ai_model_memory_limits: "10Gi"
+  ai_model_probe_port: 8000
+  ai_model_probe_scheme: HTTPS
+- ai_model: stable-diffusion-xl-mixed
+  ai_model_description: "Stable diffusion XL mixed"
+  ai_model_id: stable-diffusion-xl-mixed
+  ai_model_use_case: image-generation
+  ai_model_uri: "quay.io/telco-coe-emea/modelcar-catalog:stable-diffusion-xl-mixed-1.0"
+  ai_runtime_uri: "quay.io/telco-coe-emea/sdxl-serving-runtime:0.1.10"
+  ai_model_size: medium
+  ai_model_command:
+    - python3
+    - app.py 
+  ai_model_command_args:
+    - '--single-file-model=/mnt/models/sd_xl_base_1.0.safetensors'
+    - '--use-refiner=True'
+    - '--refiner-single-file-model=/mnt/models/sd_xl_refiner_1.0.safetensors'
+    - '--device=cuda'
+  ai_model_env:
+    - name: ENABLE_WATERMARK
+      value: 'false'
+  ai_model_cpu_requests: 4
+  ai_model_memory_requests: "8Gi"
+  ai_model_cpu_limits: 8
+  ai_model_memory_limits: "10Gi"
+  ai_model_probe_port: 8080
+  ai_model_probe_scheme: HTTP
+- ai_model: qwen-3.5-27b
+  ai_model_description: "Qwen 3.5 27b model"
+  ai_model_id: qwen-3-5-27b
+  ai_model_use_case: chat,coding
+  ai_model_uri: "quay.io/telco-coe-emea/modelcar-catalog:Qwen3.5-27B-GPTQ-Int4"
+  ai_runtime_uri: "registry.redhat.io/rhaii-preview/vllm-cuda-rhel9:poolside-laguna"
+  ai_model_size: large
+  ai_model_env:
+    - name: VLLM_ADDITIONAL_ARGS
+      value: "--max-num-seqs=128 --max-model-len=262144 --enable-auto-tool-choice --tool-call-parser=qwen3_xml --kv-cache-dtype=fp8"
+  ai_model_cpu_requests: 4
+  ai_model_memory_requests: "8Gi"
+  ai_model_cpu_limits: 6
+  ai_model_memory_limits: "10Gi"
+  ai_model_probe_port: 8000
+  ai_model_probe_scheme: HTTPS

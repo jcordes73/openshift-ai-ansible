@@ -1,0 +1,88 @@
+- name: Create llm-hosting project
+  redhat.openshift.k8s:
+    src: namespace.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Create NetworkPolicy for access from 3scale namespace
+  redhat.openshift.k8s:
+    src: networkpolicy-allow-from-3scale.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Create NetworkPolicy for access from redhat-ods-applications namespace
+  redhat.openshift.k8s:
+    src: networkpolicy-allow-from-redhat-ods-applications.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Create NetworkPolicy for access from redhat-ods-applications namespace
+  redhat.openshift.k8s:
+    src: networkpolicy-allow-from-openshift-ingress.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Create Connections for accessing modelcars in OCI registry
+  redhat.openshift.k8s:
+    template: modelcar-catalog-connection.yaml.j2
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Create GatewayClass
+  redhat.openshift.k8s:
+    src: gateway-class.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Get Certifate Secret name for the default ingress controller
+  kubernetes.core.k8s_info:
+    kind: IngressController
+    api_version: operator.openshift.io/v1
+    namespace: openshift-ingress-operator
+    name: default
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  register: ingress_controller_cert
+- name: Set ingress-controller cert name
+  set_fact:
+    ingress_controller_cert_name: "{{ ingress_controller_cert.resources[0].spec.defaultCertificate.name }}"
+- name: Create Gateway
+  redhat.openshift.k8s:
+    template: maas-gateway.yaml.j2
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Get inference services
+  kubernetes.core.k8s_info:
+    kind: LLMInferenceService
+    api_version: serving.kserve.io/v1alpha1
+    namespace: llm-hosting
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  register: inference_services
+- name: Delete existing model inference services
+  redhat.openshift.k8s:
+    kind: LLMInferenceService
+    api_version: serving.kserve.io/v1alpha1
+    name: "{{ item.metadata.name }}"
+    namespace: llm-hosting
+    state: absent
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  with_items:
+  - "{{ inference_services.resources }}"
+- name: Get secrets
+  kubernetes.core.k8s_info:
+    kind: Secret
+    api_version: v1
+    namespace: llm-hosting
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  register: llm_hosting_secrets
+- name: Set llm_hosting_pull_secret
+  set_fact:
+    llm_hosting_pull_secret: "{{ llm_hosting_secrets | community.general.json_query('resources[*].metadata.name') | flatten | select(\"match\",\"^default-dockercfg\")  | first }}"

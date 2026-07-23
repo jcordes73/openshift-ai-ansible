@@ -1,0 +1,30 @@
+- name: Check if there is a Cluster Certificate issuer
+  kubernetes.core.k8s_info:
+    api_version: cert-manager.io/v1
+    kind: ClusterIssuer
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  register: cluster_issuers
+- name: Create Cluster Certificate Issuer
+  redhat.openshift.k8s:
+    src: cluster-issuer-self-signed.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  when: cluster_issuer.resources[0] is not defined
+- name: Wait for the self-signed Cluster Certificate issuer
+  kubernetes.core.k8s_info:
+    api_version: cert-manager.io/v1
+    kind: ClusterIssuer
+    name: self-signed
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  register: cluster_issuer
+  until: cluster_issuer.resources[0].status.conditions[0].status is defined and cluster_issuer.resources[0].status.conditions[0].status == 'True'
+  retries: 12
+  delay: 10
+- name: Exposes cluster-issuer as a fact
+  set_fact:
+    cluster_issuer: "{{ cluster_issuer }}"

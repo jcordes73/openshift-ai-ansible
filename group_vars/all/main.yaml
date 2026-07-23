@@ -1,0 +1,5 @@
+---
+# Parasol AI Studio
+parasol_ai_students: 20
+# Vector Databases
+vector_db: weaviate

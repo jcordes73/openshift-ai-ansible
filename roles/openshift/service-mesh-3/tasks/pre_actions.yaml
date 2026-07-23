@@ -1,0 +1,47 @@
+- name: Create Service Mesh Subscription
+  redhat.openshift.k8s:
+    src: sm_sub.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Get Service Mesh subscription
+  redhat.openshift.k8s:
+    kind: Subscription
+    api_version: operators.coreos.com/v1alpha1
+    name: servicemeshoperator3
+    namespace: openshift-operators
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  register: sm_sub
+  until: sm_sub.result.status.installplan.name is defined
+  retries: 12
+  delay: 5
+- name: Approve InstallPlan
+  shell: |
+    oc patch installplan {{ sm_sub.result.status.installplan.name }} --namespace openshift-operators --type merge --patch '{"spec":{"approved":true}}' -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
+- name: Wait until Service Mesh subscription is "Ready"
+  redhat.openshift.k8s:
+    kind: Subscription
+    api_version: operators.coreos.com/v1alpha1
+    name: servicemeshoperator3
+    namespace: openshift-operators
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  register: sm_sub
+  until: sm_sub.result.status.state is defined and (sm_sub.result.status.state == 'AtLatestKnown' or sm_sub.result.status.state == 'UpgradeAvailable')
+  retries: 12
+  delay: 5
+- name: Create istio-cni namespace
+  redhat.openshift.k8s:
+    src: istio-cni-namespace.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Create istio-system namespace
+  redhat.openshift.k8s:
+    src: istio-system-namespace.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false

@@ -1,0 +1,56 @@
+- name: Create imagestreamtags
+  redhat.openshift.k8s:
+    template: imagestreamtag.yaml.j2
+    namespace: llm-hosting
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  with_items:
+  - "{{ ai_models | selectattr('ai_model_id','in', ai_models_enabled) }}"
+- name: Deploy models
+  redhat.openshift.k8s:
+    template: "deploy-model-maas.yaml.j2"
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  with_items:
+  - "{{ ai_models | selectattr('ai_model_id','in', ai_models_enabled) }}"
+- name: Check for model states
+  kubernetes.core.k8s_info:
+    kind: LLMInferenceService
+    api_version: serving.kserve.io/v1alpha1
+    name: "{{ item.ai_model_id }}"
+    namespace: llm-hosting
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  register: model_states
+  with_items:
+  - "{{ ai_models | selectattr('ai_model_id','in', ai_models_enabled) }}"
+  until: model_states.resources[0].status.url is defined
+  retries: 30
+  delay: 30
+- name: Create MaaS Model Refs
+  redhat.openshift.k8s:
+    template: "create-maas-model-ref.yaml.j2"
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  with_items:
+  - "{{ ai_models | selectattr('ai_model_id','in', ai_models_enabled) }}"
+- name: Create MaaS Subscriptions
+  redhat.openshift.k8s:
+    template: "maas-subscription.yaml.j2"
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  with_items:
+  - "{{ ai_models | selectattr('ai_model_id','in', ai_models_enabled) }}"
+- name: Create MaaS Auth Policy
+  redhat.openshift.k8s:
+    template: "maas-auth-policy.yaml.j2"
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  with_items:
+  - "{{ ai_models | selectattr('ai_model_id','in', ai_models_enabled) }}"

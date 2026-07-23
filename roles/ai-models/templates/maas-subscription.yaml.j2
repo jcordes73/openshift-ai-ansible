@@ -1,0 +1,16 @@
+apiVersion: maas.opendatahub.io/v1alpha1
+kind: MaaSSubscription
+metadata:
+  name: {{ item.ai_model_id }}
+  namespace: models-as-a-service
+spec:
+  modelRefs:
+  - name: {{ item.ai_model_id }}
+    namespace: llm-hosting
+    tokenRateLimits:
+    - limit: 99999
+      window: 1s
+  owner:
+    groups:
+    - name: rhods-admins
+  priority: 0

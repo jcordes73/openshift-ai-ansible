@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    ignore: me
+    internal.serving.kserve.io/storage-initializer-sourceuri: <scheme-placeholder>://stabilityai/stable-diffusion-xl-merged-1.0/
+    internal.serving.kserve.io/storage-spec: "true"
+    internal.serving.kserve.io/storage-spec-key: models-storage
+    openshift.io/display-name: SDXL-1.0
+    serving.kserve.io/deploymentMode: RawDeployment
+  labels:
+    app: isvc.sdxl-predictor
+    component: predictor
+    opendatahub.io/dashboard: "true"
+    serving.kserve.io/inferenceservice: sdxl
+  name: sdxl-predictor
+  namespace: llm-hosting
+spec:
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: isvc.sdxl-predictor
+  type: ClusterIP
