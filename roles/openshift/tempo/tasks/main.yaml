@@ -35,56 +35,33 @@
   retries: 12
   delay: 5
   ignore_errors: yes
+- name: Wait for Tempo Operator Deployment
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Deployment
+    name: tempo-operator-controller
+    namespace: openshift-tempo-operator
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  register: tempo_operator_deployment
+  until: tempo_operator_deployment.resources[0].status.readyReplicas is defined and tempo_operator_deployment.resources[0].status.readyReplicas == 1
+  retries: 12
+  delay: 5
 - name: Create Tempo namespace
   redhat.openshift.k8s:
     src: namespace-tempo.yaml
     host: "{{ openshift_api_url }}"
     api_key: "{{ openshift_token }}"
     validate_certs: false
-- name: Create ODF ObjectBucketClaim
-  redhat.openshift.k8s:
-    src: tempostack-obc.yaml
-    host: "{{ openshift_api_url }}"
-    api_key: "{{ openshift_token }}"
-    validate_certs: false
-- name: Wait until ODF ObjectBucketClaim is "Ready"
-  kubernetes.core.k8s_info:
-    kind: ObjectBucketClaim
-    api_version: v1alpha1
-    name: tempostack-obc
-    namespace: tempo
-    host: "{{ openshift_api_url }}"
-    api_key: "{{ openshift_token }}"
-    validate_certs: false
-  register: tempostack_obc
-  until: tempostack_obc.resources[0].status.phase is defined and tempostack_obc.resources[0].status.phase == 'Bound'
-  retries: 12
-  delay: 10 
-- name: Get ODF ObjectBucketClaim Secret
-  kubernetes.core.k8s_info:
-    kind: Secret
-    api_version: v1
-    name: tempostack-obc
-    namespace: tempo
-    host: "{{ openshift_api_url }}"
-    api_key: "{{ openshift_token }}"
-    validate_certs: false
-  register: tempostack_obc_secret
-- name: Get ODF ObjectBucketClaim Secret
-  kubernetes.core.k8s_info:
-    kind: ConfigMap
-    api_version: v1
-    name: tempostack-obc
-    namespace: tempo
-    host: "{{ openshift_api_url }}"
-    api_key: "{{ openshift_token }}"
-    validate_certs: false
-  register: tempostack_obc_cm
-- set_fact:
-    tempo_s3_endpoint: "https://{{ tempostack_obc_cm.resources[0].data.BUCKET_HOST }}"
-    tempo_s3_bucket: "{{ tempostack_obc_cm.resources[0].data.BUCKET_NAME }}"
-    tempo_s3_access_key_id: "{{ tempostack_obc_secret.resources[0].data.AWS_ACCESS_KEY_ID | b64decode }}"
-    tempo_s3_access_key_secret: "{{  tempostack_obc_secret.resources[0].data.AWS_SECRET_ACCESS_KEY | b64decode }}"
+- name: Create S3 Storage (ODF)
+  ansible.builtin.include_tasks:
+    file: create_odf_bucket_claim.yaml
+  when: s3_storage_provider == "ODF"
+- name: Create S3 Storage (MinIO)
+  ansible.builtin.include_tasks:
+    file: create_minio_bucket.yaml
+  when: s3_storage_provider == "MinIO"
 - name: Create Tempo Secret
   redhat.openshift.k8s:
     template: tempo-secret.yaml.j2

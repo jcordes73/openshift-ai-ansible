@@ -6,22 +6,17 @@ metadata:
     prometheus.io/scrape: "true"
   labels:
     app.kubernetes.io/component: metrics
-    app.kubernetes.io/instance: kuadrant
+    app.kubernetes.io/instance: rhcl
     app.kubernetes.io/name: coredns
+    app.kubernetes.io/version: rhcl-1.3
   name: kuadrant-coredns-metrics
   namespace: kuadrant-coredns
 spec:
-  internalTrafficPolicy: Cluster
-  ipFamilies:
-    - IPv4
-  ipFamilyPolicy: SingleStack
   ports:
-    - name: metrics
-      port: 9153
-      protocol: TCP
-      targetPort: 9153
+  - name: metrics
+    port: 9153
+    targetPort: 9153
   selector:
-    app.kubernetes.io/instance: kuadrant
+    app.kubernetes.io/instance: rhcl
     app.kubernetes.io/name: coredns
-  sessionAffinity: None
-  type: ClusterIP
+    app.kubernetes.io/version: rhcl-1.3

@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: apis-gw-options
+  namespace: gateway-system
+data:
+  service: |
+    metadata:
+      annotations:
+        service.beta.openshift.io/serving-cert-secret-name: "apis-gateway-service-tls"
+    spec:
+      type: {% if openshift_platform == "BareMetal" or openshift_platform == "None" %}ClusterIP{% else %}LoadBalancer{% endif %}

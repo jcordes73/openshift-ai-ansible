@@ -86,3 +86,4 @@
     aws_guid: "{{ aws_machineset.resources[0].spec.template.spec.providerSpec.value.tags | json_query(\"[?name=='guid'].value | [0]\") }}"
     aws_uuid: "{{ aws_machineset.resources[0].spec.template.spec.providerSpec.value.tags | json_query(\"[?name=='uuid'].value | [0]\") }}"
     aws_ami: "{{ aws_machineset.resources[0].spec.template.spec.providerSpec.value.ami.id }}"
+  when: openshift_platform == 'AWS'

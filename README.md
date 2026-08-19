@@ -42,6 +42,7 @@ Additional Python dependencies need to be installed:
 ```bash
 pip install requests
 pip install kubernetes
+pip install dnspython
 ```
 ## Create vault
 Create a file `group_vars/all/openshift.yaml` for the Openshift credentials and access details
@@ -58,5 +59,5 @@ ansible-vault encrypt group_vars/all/openshift.yaml
 ## Start Automation
 To start the automation, run
 ```bash
-ansible-playbook -vvv --ask-vault-pass -i inventory-ai playbook-ai-3.yaml 
+ansible-playbook -vvv --ask-vault-pass -i inventory-ai.yaml playbook-ai-3.yaml 
 ```

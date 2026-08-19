@@ -1,0 +1,12 @@
+- name: Create S3 Bucket
+  amazon.aws.s3_bucket:
+    access_key: minio
+    secret_key: minio123
+    name: tempo
+    endpoint_url: "{{ minio_s3_endpoint }}"
+- name: Set the S3 Access Details
+  set_fact:
+    tempo_s3_endpoint: "{{ minio_s3_endpoint }}"
+    tempo_s3_bucket: "tempo"
+    tempo_s3_access_key_id: "minio"
+    tempo_s3_access_key_secret: "minio123"

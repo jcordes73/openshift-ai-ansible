@@ -1,3 +1,9 @@
+- name: Create Kuadrant CoreDNS namespace
+  redhat.openshift.k8s:
+    src: kuadrant-coredns-namespace.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
 - name: Create Kuadrant CoreDNS credentials secret
   redhat.openshift.k8s:
     template: coredns-credentials-secret.yaml.j2
@@ -20,18 +26,6 @@
     host: "{{ openshift_api_url }}"
     api_key: "{{ openshift_token }}"
     validate_certs: false
-- name: Create Kuadrant CoreDNS service
-  redhat.openshift.k8s:
-    src: kuadrant-coredns-service.yaml
-    host: "{{ openshift_api_url }}"
-    api_key: "{{ openshift_token }}"
-    validate_certs: false
-- name: Create Kuadrant CoreDNS metrics service
-  redhat.openshift.k8s:
-    src: kuadrant-coredns-metrics-service.yaml
-    host: "{{ openshift_api_url }}"
-    api_key: "{{ openshift_token }}"
-    validate_certs: false
 - name: Create Kuadrant CoreDNS configmap
   redhat.openshift.k8s:
     template: kuadrant-coredns-configmap.yaml.j2
@@ -41,6 +35,31 @@
 - name: Create Kuadrant CoreDNS deployment
   redhat.openshift.k8s:
     src: kuadrant-coredns-deployment.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Wait for Kuadrant CoreDNS deployment
+  kubernetes.core.k8s_info:
+    api_version: apps/v1
+    kind: Deployment
+    name: kuadrant-coredns
+    namespace: kuadrant-coredns
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  register: kuadrant_coredns_deployment
+  retries: 12
+  delay: 10
+  until: kuadrant_coredns_deployment.resources[0].status.readyReplicas is defined and kuadrant_coredns_deployment.resources[0].status.readyReplicas == 1
+- name: Create Kuadrant CoreDNS service
+  redhat.openshift.k8s:
+    src: kuadrant-coredns-service.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Create Kuadrant CoreDNS metrics service
+  redhat.openshift.k8s:
+    src: kuadrant-coredns-metrics-service.yaml
     host: "{{ openshift_api_url }}"
     api_key: "{{ openshift_token }}"
     validate_certs: false

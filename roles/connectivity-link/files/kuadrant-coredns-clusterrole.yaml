@@ -2,32 +2,33 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   labels:
-    app.kubernetes.io/instance: kuadrant
+    app.kubernetes.io/instance: rhcl
     app.kubernetes.io/name: coredns
+    app.kubernetes.io/version: rhcl-1.3
   name: kuadrant-coredns
 rules:
-  - apiGroups:
-      - ""
-    resources:
-      - endpoints
-      - services
-      - pods
-      - namespaces
-    verbs:
-      - list
-      - watch
-  - apiGroups:
-      - discovery.k8s.io
-    resources:
-      - endpointslices
-    verbs:
-      - list
-      - watch
-  - apiGroups:
-      - kuadrant.io
-    resources:
-      - dnsrecords
-    verbs:
-      - get
-      - list
-      - watch
+- apiGroups:
+  - ""
+  resources:
+  - endpoints
+  - services
+  - pods
+  - namespaces
+  verbs:
+  - list
+  - watch
+- apiGroups:
+  - discovery.k8s.io
+  resources:
+  - endpointslices
+  verbs:
+  - list
+  - watch
+- apiGroups:
+  - kuadrant.io
+  resources:
+  - dnsrecords
+  verbs:
+  - get
+  - list
+  - watch

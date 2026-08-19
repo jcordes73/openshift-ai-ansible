@@ -3,13 +3,13 @@
   connection: local
   vars:
     ai_models_enabled:
-      - granite-3-3-8b-instruct
-      - granite-8b-code-instruct
-      - stable-diffusion-xl-mixed
-      - qwen-3-5-27b
+#      - granite-3-3-8b-instruct
+#      - granite-8b-code-instruct
+#      - stable-diffusion-xl-mixed
+#      - qwen-3-5-27b
   roles:
     - openshift/user-workload-monitoring
-    - openshift/data-foundation
+#    - openshift/data-foundation
     - openshift/nvidia-gpu-nodes/aws
     - nvidia-gpu
     - openshift/nfd

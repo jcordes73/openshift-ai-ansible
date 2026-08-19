@@ -10,13 +10,6 @@
     host: "{{ openshift_api_url }}"
     api_key: "{{ openshift_token }}"
     validate_certs: false
-- name: Create kuadrant-coredns namespace
-  redhat.openshift.k8s:
-    src: kuadrant-coredns-namespace.yaml
-    host: "{{ openshift_api_url }}"
-    api_key: "{{ openshift_token }}"
-    validate_certs: false
-  when: openshift_platform == 'BareMetal'
 - name: Create gateway-system namespace
   redhat.openshift.k8s:
     src: gateway-system-namespace.yaml
@@ -25,7 +18,7 @@
     validate_certs: false
 - name: Create Connectivity Link Subscription
   redhat.openshift.k8s:
-    src: cl_sub.yaml
+    src: cl-sub.yaml
     host: "{{ openshift_api_url }}"
     api_key: "{{ openshift_token }}"
     validate_certs: false
@@ -41,7 +34,7 @@
   register: cl_sub
   until: cl_sub.result.status.installplan.name is defined
   retries: 12
-  delay: 5
+  delay: 10
 - name: Approve InstallPlan
   shell: |
     oc patch installplan {{ cl_sub.result.status.installplan.name }} --namespace openshift-operators --type merge --patch '{"spec":{"approved":true}}' -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
@@ -57,7 +50,7 @@
   register: cl_sub
   until: cl_sub.result.status.state is defined and (cl_sub.result.status.state == 'AtLatestKnown' or cl_sub.result.status.state == 'UpgradeAvailable')
   retries: 12
-  delay: 5
+  delay: 10
 - name: Create Pull secret
   redhat.openshift.k8s:
     template: pull_secret.yaml.j2

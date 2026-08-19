@@ -5,7 +5,7 @@ metadata:
     app.kubernetes.io/instance: kuadrant
     app.kubernetes.io/name: coredns
   name: kuadrant-coredns
-  namespace: kuadrant-coredns
+  namespace: kuadrant-system
 spec:
   endpoints:
     - port: metrics

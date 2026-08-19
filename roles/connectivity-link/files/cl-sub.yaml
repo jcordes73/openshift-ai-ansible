@@ -5,11 +5,8 @@ metadata:
   namespace: openshift-operators
 spec:
   channel: stable
-  installPlanApproval: Automatic
+  installPlanApproval: Manual
   name: rhcl-operator
   source: redhat-operators
   sourceNamespace: openshift-marketplace
-  config:
-    env:
-      - name: AUTH_SERVICE_TIMEOUT
-        value: 2s
+  startingCSV: rhcl-operator.v1.3.6

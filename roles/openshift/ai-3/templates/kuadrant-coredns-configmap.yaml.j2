@@ -1,14 +1,26 @@
+apiVersion: v1
 kind: ConfigMap
 metadata:
+  name: kuadrant-coredns
+  namespace: kuadrant-coredns
   labels:
     app.kubernetes.io/instance: rhcl
     app.kubernetes.io/name: coredns
     app.kubernetes.io/version: rhcl-1.3
-  name: kuadrant-coredns
-  namespace: kuadrant-coredns
 data:
   Corefile: |
-    apis.{{ base_domain }} {
+    apis.{{ openshift_apps_domain }} {
+        debug
+        errors
+        health {
+            lameduck 5s
+        }
+        ready
+        log
+        metadata
+        kuadrant
+    }
+    maas.{{ openshift_apps_domain }} {
         debug
         errors
         health {

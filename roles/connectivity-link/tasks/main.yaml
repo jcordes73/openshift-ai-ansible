@@ -18,10 +18,10 @@
   ansible.builtin.include_tasks:
     file: create_aws_credentials.yaml
   when: openshift_platform == 'AWS'
-- name: Create Cluster CoreDNS
+- name: Deploy Cluster CoreDNS
   ansible.builtin.include_tasks:
-    file: create_coredns.yaml
-  when: openshift_platform == 'BareMetal'
+    file: deploy_coredns.yaml
+  when: openshift_platform == 'BareMetal' or openshift_platform == 'None'
 - name: Execute post-actions
   ansible.builtin.include_tasks:
     file: post_actions.yaml

@@ -1,9 +1,22 @@
+- name: Create API Gateway Config
+  redhat.openshift.k8s:
+    template: gateway-apis-config.yaml.j2
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
 - name: Create API Gateway
   redhat.openshift.k8s:
     template: gateway-apis.yaml.j2
     host: "{{ openshift_api_url }}"
     api_key: "{{ openshift_token }}"
     validate_certs: false
+- name: Create API Gateway Route
+  redhat.openshift.k8s:
+    template: gateway-apis-route.yaml.j2
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  when: openshift_platform == "BareMetal" or openshift_platform == "None"
 - name: Create TLS Policy
   redhat.openshift.k8s:
     template: tls-policy.yaml.j2
@@ -23,7 +36,7 @@
     host: "{{ openshift_api_url }}"
     api_key: "{{ openshift_token }}"
     validate_certs: false
-  when: openshift_platform == 'BareMetal'
+  when: openshift_platform == 'BareMetal' or openshift_platform == 'None'
 - name: Create Rate Limit Policy
   redhat.openshift.k8s:
     src: rate-limit-policy.yaml

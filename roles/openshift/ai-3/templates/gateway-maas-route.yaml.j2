@@ -1,0 +1,20 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: maas
+  namespace: openshift-ingress
+  annotations:
+    router.openshift.io/service-ca-certificate: "true"
+spec:
+  host: maas.{{ openshift_apps_domain }}
+  to:
+    kind: Service
+    name: maas-default-gateway-data-science-gateway-class
+    weight: 100
+  port:
+    targetPort: https 
+  tls:
+    termination: reencrypt
+    insecureEdgeTerminationPolicy: Redirect
+  wildcardPolicy: None
+

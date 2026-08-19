@@ -1,0 +1,16 @@
+- name: Provision OpenShift AI Gateway
+  hosts: ai
+  connection: local
+  roles:
+#    - minio
+#    - openshift/user-workload-monitoring
+#    - openshift/cluster-observability
+#    - openshift/tempo
+#    - openshift/opentelemetry
+#    - nvidia-gpu
+#    - openshift/nfd
+#    - openshift/kueue
+#    - openshift/lws
+#    - connectivity-link
+    - openshift/ai-3
+#    - mcp-gateway

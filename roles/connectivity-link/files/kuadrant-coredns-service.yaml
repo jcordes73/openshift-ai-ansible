@@ -2,30 +2,23 @@ apiVersion: v1
 kind: Service
 metadata:
   labels:
-    app.kubernetes.io/instance: kuadrant
+    app.kubernetes.io/instance: rhcl
     app.kubernetes.io/name: coredns
+    app.kubernetes.io/version: rhcl-1.3
   name: kuadrant-coredns
   namespace: kuadrant-coredns
 spec:
-  allocateLoadBalancerNodePorts: true
-  externalTrafficPolicy: Cluster
-  internalTrafficPolicy: Cluster
-  ipFamilies:
-    - IPv4
-  ipFamilyPolicy: SingleStack
   ports:
-    - name: udp-53
-      nodePort: 30286
-      port: 53
-      protocol: UDP
-      targetPort: 53
-    - name: tcp-53
-      nodePort: 30286
-      port: 53
-      protocol: TCP
-      targetPort: 53
+  - name: udp-53
+    port: 53
+    protocol: UDP
+    targetPort: 53
+  - name: tcp-53
+    port: 53
+    protocol: TCP
+    targetPort: 53
   selector:
-    app.kubernetes.io/instance: kuadrant
+    app.kubernetes.io/instance: rhcl
     app.kubernetes.io/name: coredns
-  sessionAffinity: None
+    app.kubernetes.io/version: rhcl-1.3
   type: LoadBalancer

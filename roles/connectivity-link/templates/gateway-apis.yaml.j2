@@ -7,11 +7,16 @@ metadata:
     kuadrant.io/gateway: "true"
 spec:
   gatewayClassName: openshift-default
+  infrastructure:
+    parametersRef:
+      group: ""
+      kind: ConfigMap
+      name: apis-gw-options
   listeners:
     - allowedRoutes:
         namespaces:
           from: All
-      hostname: "*.apis.{{ base_domain }}"
+      hostname: "apis.{{ base_domain }}"
       name: api
       port: 443
       protocol: HTTPS
@@ -19,5 +24,5 @@ spec:
         certificateRefs:
         - group: ""
           kind: Secret
-          name: api-external-tls
+          name: api-gateway-service-tls
         mode: Terminate

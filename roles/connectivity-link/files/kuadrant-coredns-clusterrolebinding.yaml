@@ -2,14 +2,15 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   labels:
-    app.kubernetes.io/instance: kuadrant
+    app.kubernetes.io/instance: rhcl
     app.kubernetes.io/name: coredns
+    app.kubernetes.io/version: rhcl-1.3
   name: kuadrant-coredns
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
   name: kuadrant-coredns
 subjects:
-  - kind: ServiceAccount
-    name: default
-    namespace: kuadrant-coredns
+- kind: ServiceAccount
+  name: default
+  namespace: kuadrant-coredns

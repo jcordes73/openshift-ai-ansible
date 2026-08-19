@@ -3,6 +3,27 @@
     name: openshift/common
     public: true
   when: openshift_token is undefined
+- name: Update Kuadrant CoreDNS configmap
+  redhat.openshift.k8s:
+    template: kuadrant-coredns-configmap.yaml.j2
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  when: openshift_platform == 'BareMetal' or openshift_platform == 'None'
+- name: Update Kuadrant CoreDNS credentials secret
+  redhat.openshift.k8s:
+    template: coredns-credentials-secret.yaml.j2
+    namespace: "{{ item }}"
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  loop:
+    - cert-manager
+    - gateway-system
+  when: openshift_platform == 'BareMetal' or openshift_platform == 'None'
+- name: Update CoreDNS config
+  shell: |
+    oc patch deployment kuadrant-coredns --patch '{"spec":{"template":{"spec":{"volumes":[{"name":"config-volume","configMap":{"name":"kuadrant-coredns","items":[{"key":"Corefile","path":"Corefile"}]}}]}}}}' -n kuadrant-coredns -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
 - name: Create OpenShift AI Operator namespace
   redhat.openshift.k8s:
     src: operator-namespace.yaml
@@ -158,18 +179,36 @@
 - name: Authorino TLS creation
   shell: |
     oc annotate service authorino-authorino-authorization -n kuadrant-system service.beta.openshift.io/serving-cert-secret-name=authorino-server-cert  --overwrite -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
-- name: Patch Authorina TLS listener
+- name: Patch Authorino TLS listener
   shell: |
     oc patch authorino authorino -n kuadrant-system --type merge --patch '{"spec":{"listener":{"tls":{"enabled": true,"certSecretRef": {"name": "authorino-server-cert"}}}}}' -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
 - name: Patch Authorina TLS listener
   shell: |
     oc -n kuadrant-system set env deployment/authorino SSL_CERT_FILE=/etc/ssl/certs/openshift-service-ca/service-ca-bundle.crt REQUESTS_CA_BUNDLE=/etc/ssl/certs/openshift-service-ca/service-ca-bundle.crt -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
+- name: Create MaaS Gateway Config
+  redhat.openshift.k8s:
+    template: gateway-maas-config.yaml.j2
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
 - name: Create MaaS Gateway
   redhat.openshift.k8s:
     template: gateway-maas.yaml.j2
     host: "{{ openshift_api_url }}"
     api_key: "{{ openshift_token }}"
     validate_certs: false
+- name: Create MaaS Gateway Route
+  redhat.openshift.k8s:
+    template: gateway-maas-route.yaml.j2
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  when: openshift_platform == "BareMetal" or openshift_platform == "None"
+- name: Patch EnvoyFilter (This shouldn't be needed in main and only on 3.4)
+  shell: |
+    oc patch envoyfilter payload-processing -n openshift-ingress --type='json' -p='[{"op":"replace","path":"/spec/configPatches/0/match/listener/filterChain/filter/subFilter/name","value":"envoy.filters.http.wasm"}]' -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
+    oc patch envoyfilter payload-processing -n openshift-ingress --type='json' -p='[{"op":"remove","path":"/spec/targetRefs"},{"op":"add","path":"/spec/workloadSelector","value":{"labels":{"gateway.networking.k8s.io/gateway-name":"maas-default-gateway"}}}]' -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
+    oc delete pod -n openshift-ingress -l gateway.networking.k8s.io/gateway-name=maas-default-gateway -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
 - name: Set MAAS API URL in the Dashboard
   shell: |
     oc set env deployment/rhods-dashboard --containers='*' MAAS_API_URL=https://maas.{{ openshift_apps_domain }}/maas-api -n redhat-ods-applications -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true

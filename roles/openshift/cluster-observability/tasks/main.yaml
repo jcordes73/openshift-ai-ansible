@@ -15,17 +15,24 @@
     host: "{{ openshift_api_url }}"
     api_key: "{{ openshift_token }}"
     validate_certs: false
-- name: Create OpenShift Cluster Observabilitz subscription
+- name: Create OpenShift Cluster Observability subscription
   redhat.openshift.k8s:
     src: coo-sub.yaml
     host: "{{ openshift_api_url }}"
     api_key: "{{ openshift_token }}"
     validate_certs: false
+  register: coo_sub
+  until: coo_sub.result.status.installplan.name is defined
+  retries: 12
+  delay: 10
+- name: Approve InstallPlan
+  shell: |
+    oc patch installplan {{ coo_sub.result.status.installplan.name }} --namespace openshift-cluster-observability-operator --type merge --patch '{"spec":{"approved":true}}' -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
 - name: Wait until OpenShift Cluster Observability subscription is "Ready"
   kubernetes.core.k8s_info:
     kind: Subscription
     api_version: operators.coreos.com/v1alpha1
-    name: coo
+    name: cluster-observability-operator
     namespace: openshift-cluster-observability-operator
     host: "{{ openshift_api_url }}"
     api_key: "{{ openshift_token }}"
@@ -33,5 +40,5 @@
   register: coo_sub
   until: coo_sub.resources[0].status.state is defined and (coo_sub.resources[0].status.state == 'AtLatestKnown' or coo_sub.resources[0].status.state == 'UpgradeAvailable')
   retries: 12
-  delay: 5
+  delay: 10
   ignore_errors: yes

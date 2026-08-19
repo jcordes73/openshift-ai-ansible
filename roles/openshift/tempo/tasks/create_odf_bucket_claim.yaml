@@ -1,0 +1,45 @@
+- name: Create ODF ObjectBucketClaim
+  redhat.openshift.k8s:
+    src: tempostack-obc.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Wait until ODF ObjectBucketClaim is "Ready"
+  kubernetes.core.k8s_info:
+    kind: ObjectBucketClaim
+    api_version: v1alpha1
+    name: tempostack-obc
+    namespace: tempo
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  register: tempostack_obc
+  until: tempostack_obc.resources[0].status.phase is defined and tempostack_obc.resources[0].status.phase == 'Bound'
+  retries: 12
+  delay: 10
+- name: Get ODF ObjectBucketClaim Secret
+  kubernetes.core.k8s_info:
+    kind: Secret
+    api_version: v1
+    name: tempostack-obc
+    namespace: tempo
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  register: tempostack_obc_secret
+- name: Get ODF ObjectBucketClaim Secret
+  kubernetes.core.k8s_info:
+    kind: ConfigMap
+    api_version: v1
+    name: tempostack-obc
+    namespace: tempo
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  register: tempostack_obc_cm
+- name: Set the S3 Access Details
+  set_fact:
+    tempo_s3_endpoint: "https://{{ tempostack_obc_cm.resources[0].data.BUCKET_HOST }}"
+    tempo_s3_bucket: "{{ tempostack_obc_cm.resources[0].data.BUCKET_NAME }}"
+    tempo_s3_access_key_id: "{{ tempostack_obc_secret.resources[0].data.AWS_ACCESS_KEY_ID | b64decode }}"
+    tempo_s3_access_key_secret: "{{  tempostack_obc_secret.resources[0].data.AWS_SECRET_ACCESS_KEY | b64decode }}"

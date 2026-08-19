@@ -1,0 +1,76 @@
+- name: Include OpenShift Common
+  include_role:
+    name: openshift/common
+    public: true
+- name: Create minio namespace
+  redhat.openshift.k8s:
+    src: namespace.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Create minio secret
+  redhat.openshift.k8s:
+    src: secret.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Create minio pvc
+  redhat.openshift.k8s:
+    src: pvc.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Create minio deployment
+  redhat.openshift.k8s:
+    src: deployment.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Wait for Minio Deployment
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Deployment
+    name: minio
+    namespace: minio
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  register: minio_deployment
+  until: minio_deployment.resources[0].status.readyReplicas is defined and minio_deployment.resources[0].status.readyReplicas == 1
+  retries: 12
+  delay: 5
+- name: Create minio service
+  redhat.openshift.k8s:
+    src: service.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Create API route
+  redhat.openshift.k8s:
+    src: route-api.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Create UI route
+  redhat.openshift.k8s:
+    src: route-ui.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Wait for API Route
+  kubernetes.core.k8s_info:
+    api_version: route.openshift.io/v1
+    kind: Route
+    namespace: minio
+    name: minio-api
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  register: api_route
+  until: api_route.resources[0].spec.host is defined
+  retries: 12
+  delay: 10
+- name: Set Minio as the S3 Storage Provider
+  set_fact:
+    s3_storage_provider: "MinIO"
+    minio_s3_endpoint: "https://{{ api_route.resources[0].spec.host }}"
