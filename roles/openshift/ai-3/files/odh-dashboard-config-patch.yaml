@@ -1,0 +1,9 @@
+spec:
+  dashboardConfig:
+    disableModelCatalog: false
+    disableTracking: false
+    genAiStudio: true
+    maasAuthPolicies: true
+    modelAsService: true
+    observabilityDashboard: true
+    vLLMDeploymentOnMaaS: true

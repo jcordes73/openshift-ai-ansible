@@ -182,7 +182,7 @@
 - name: Patch Authorino TLS listener
   shell: |
     oc patch authorino authorino -n kuadrant-system --type merge --patch '{"spec":{"listener":{"tls":{"enabled": true,"certSecretRef": {"name": "authorino-server-cert"}}}}}' -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
-- name: Patch Authorina TLS listener
+- name: Patch Authorino TLS listener
   shell: |
     oc -n kuadrant-system set env deployment/authorino SSL_CERT_FILE=/etc/ssl/certs/openshift-service-ca/service-ca-bundle.crt REQUESTS_CA_BUNDLE=/etc/ssl/certs/openshift-service-ca/service-ca-bundle.crt -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
 - name: Create MaaS Gateway Config
@@ -204,38 +204,45 @@
     api_key: "{{ openshift_token }}"
     validate_certs: false
   when: openshift_platform == "BareMetal" or openshift_platform == "None"
-- name: Patch EnvoyFilter (This shouldn't be needed in main and only on 3.4)
+- name: Patch MaaS default-tenant
   shell: |
-    oc patch envoyfilter payload-processing -n openshift-ingress --type='json' -p='[{"op":"replace","path":"/spec/configPatches/0/match/listener/filterChain/filter/subFilter/name","value":"envoy.filters.http.wasm"}]' -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
-    oc patch envoyfilter payload-processing -n openshift-ingress --type='json' -p='[{"op":"remove","path":"/spec/targetRefs"},{"op":"add","path":"/spec/workloadSelector","value":{"labels":{"gateway.networking.k8s.io/gateway-name":"maas-default-gateway"}}}]' -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
-    oc delete pod -n openshift-ingress -l gateway.networking.k8s.io/gateway-name=maas-default-gateway -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
-- name: Set MAAS API URL in the Dashboard
-  shell: |
-    oc set env deployment/rhods-dashboard --containers='*' MAAS_API_URL=https://maas.{{ openshift_apps_domain }}/maas-api -n redhat-ods-applications -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
-- name: Enable Model Catalog
-  shell: |
-    oc patch odhdashboardconfig odh-dashboard-config -n redhat-ods-applications --type merge --patch '{"spec":{"dashboardConfig":{"disableModelCatalog": false }}}' -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
-- name: Enable GenAI Studio
-  shell: |
-    oc patch odhdashboardconfig odh-dashboard-config -n redhat-ods-applications --type merge --patch '{"spec":{"dashboardConfig":{"genAiStudio": true }}}' -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
-- name: Enable MaaS
-  shell: |
-    oc patch odhdashboardconfig odh-dashboard-config -n redhat-ods-applications --type merge --patch '{"spec":{"dashboardConfig":{"modelAsService": true }}}' -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
-- name: Enable MaaS
-  shell: |
-    oc patch odhdashboardconfig odh-dashboard-config -n redhat-ods-applications --type merge --patch '{"spec":{"dashboardConfig":{"vLLMDeploymentOnMaaS": true }}}' -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
-- name: Enable MaaS Auth Policy
-  shell: |
-    oc patch odhdashboardconfig odh-dashboard-config -n redhat-ods-applications --type merge --patch '{"spec":{"dashboardConfig":{"maasAuthPolicies": true }}}' -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
-- name: Enable MaaS Observability Dashboard
-  shell: |
-    oc patch odhdashboardconfig odh-dashboard-config -n redhat-ods-applications --type merge --patch '{"spec":{"dashboardConfig":{"observabilityDashboard": true }}}' -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
-- name: Create MCP servers
-  redhat.openshift.k8s:
-    template: mcp-servers.yaml.j2
+    oc patch tenants.maas.opendatahub.io default-tenant -n models-as-a-service --type merge --patch-file={{ role_path }}/files/default-tenant-patch.json  -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
+- name: Wait until EnvoyFilter is available
+  kubernetes.core.k8s_info:
+    api_version: networking.istio.io/v1alpha3
+    kind: EnvoyFilter
+    name: payload-processing
+    namespace: openshift-ingress
     host: "{{ openshift_api_url }}"
     api_key: "{{ openshift_token }}"
     validate_certs: false
+  register: payload_processing
+  until: payload_processing.resources[0] is defined
+- name: Remove EnvoyFilter
+  redhat.openshift.k8s:
+    api_version: networking.istio.io/v1alpha3
+    kind: EnvoyFilter
+    name: payload-processing
+    namespace: openshift-ingress
+    state: absent
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Replace EnvoyFilter (This shouldn't be needed in main and only on 3.4)
+  redhat.openshift.k8s:
+    src: envoy-filter.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Restart MaaS Gateway Pod
+  shell: |
+    oc delete pod -n openshift-ingress -l gateway.networking.k8s.io/gateway-name=maas-default-gateway -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
+- name: Patch Dashboard-Config
+  shell: |
+    oc patch odhdashboardconfig odh-dashboard-config -n redhat-ods-applications --type=merge --patch-file={{ role_path }}/files/odh-dashboard-config-patch.yaml -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
+- name: Set MAAS API URL in the Dashboard
+  shell: |
+    oc set env deployment/rhods-dashboard --containers='*' MAAS_API_URL=https://maas.{{ openshift_apps_domain }}/maas-api -n redhat-ods-applications -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
 - name: Check kserve controller deployment
   kubernetes.core.k8s_info:
     api_version: v1 
@@ -253,9 +260,6 @@
   shell: |
     oc adm groups add-users rhods-admins admin -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
   ignore_errors: true
-- name: Patch MaaS default-tenant
-  shell: |
-    oc patch tenants.maas.opendatahub.io default-tenant -n models-as-a-service --type merge --patch-file={{ role_path }}/files/default-tenant-patch.json  -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
 - name: Check MaaS TelemetryPolicy
   kubernetes.core.k8s_info:
     api_version: extensions.kuadrant.io/v1alpha1
@@ -269,3 +273,9 @@
   until: maas_telemetry_policy.resources[0].status.conditions is defined
   retries: 20  
   delay: 30
+- name: Create MCP servers
+  redhat.openshift.k8s:
+    template: mcp-servers.yaml.j2
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
