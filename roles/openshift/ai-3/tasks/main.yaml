@@ -218,24 +218,11 @@
     validate_certs: false
   register: payload_processing
   until: payload_processing.resources[0] is defined
-- name: Remove EnvoyFilter
-  redhat.openshift.k8s:
-    api_version: networking.istio.io/v1alpha3
-    kind: EnvoyFilter
-    name: payload-processing
-    namespace: openshift-ingress
-    state: absent
-    host: "{{ openshift_api_url }}"
-    api_key: "{{ openshift_token }}"
-    validate_certs: false
-- name: Replace EnvoyFilter (This shouldn't be needed in main and only on 3.4)
-  redhat.openshift.k8s:
-    src: envoy-filter.yaml
-    host: "{{ openshift_api_url }}"
-    api_key: "{{ openshift_token }}"
-    validate_certs: false
-- name: Restart MaaS Gateway Pod
+- name: Patch EnvoyFilter
   shell: |
+    oc scale deployment maas-controller -n redhat-ods-applications --replicas=0 -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
+    oc get envoyfilter payload-processing -n openshift-ingress -o json -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true | \
+    python3 {{ role_path }}/files/envoy-filter-patch.py | oc replace -f - -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
     oc delete pod -n openshift-ingress -l gateway.networking.k8s.io/gateway-name=maas-default-gateway -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
 - name: Patch Dashboard-Config
   shell: |
