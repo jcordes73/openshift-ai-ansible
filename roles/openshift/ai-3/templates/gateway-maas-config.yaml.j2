@@ -4,6 +4,19 @@ metadata:
   name: maas-gw-options
   namespace: openshift-ingress
 data:
+  deployment: |
+    spec:
+      template:
+        spec:
+          containers:
+          - name: istio-proxy
+            resources:
+              requests:
+                cpu: 100m
+                memory: 256Mi
+              limits:
+                cpu: "2"
+                memory: 2Gi
   service: |
     metadata:
       annotations:

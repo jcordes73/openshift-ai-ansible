@@ -19,7 +19,7 @@ spec:
         managementState: Managed
     kueue:
       managementState: Unmanaged
-    llamastackoperator:
+    ogx:
       managementState: Managed
     modelmeshserving:
       managementState: Managed

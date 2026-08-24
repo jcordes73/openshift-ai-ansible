@@ -207,23 +207,6 @@
 - name: Patch MaaS default-tenant
   shell: |
     oc patch tenants.maas.opendatahub.io default-tenant -n models-as-a-service --type merge --patch-file={{ role_path }}/files/default-tenant-patch.json  -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
-- name: Wait until EnvoyFilter is available
-  kubernetes.core.k8s_info:
-    api_version: networking.istio.io/v1alpha3
-    kind: EnvoyFilter
-    name: payload-processing
-    namespace: openshift-ingress
-    host: "{{ openshift_api_url }}"
-    api_key: "{{ openshift_token }}"
-    validate_certs: false
-  register: payload_processing
-  until: payload_processing.resources[0] is defined
-- name: Patch EnvoyFilter
-  shell: |
-    oc scale deployment maas-controller -n redhat-ods-applications --replicas=0 -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
-    oc get envoyfilter payload-processing -n openshift-ingress -o json -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true | \
-    python3 {{ role_path }}/files/envoy-filter-patch.py | oc replace -f - -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
-    oc delete pod -n openshift-ingress -l gateway.networking.k8s.io/gateway-name=maas-default-gateway -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
 - name: Patch Dashboard-Config
   shell: |
     oc patch odhdashboardconfig odh-dashboard-config -n redhat-ods-applications --type=merge --patch-file={{ role_path }}/files/odh-dashboard-config-patch.yaml -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
