@@ -175,7 +175,11 @@
     src: maas-db-config-secret.yaml
     host: "{{ openshift_api_url }}"
     api_key: "{{ openshift_token }}"
+    namespace: "{{ item }}"
     validate_certs: false
+  with_items:
+    - redhat-ods-applications
+    - redhat-ai-gateway-infra
 - name: Authorino TLS creation
   shell: |
     oc annotate service authorino-authorino-authorization -n kuadrant-system service.beta.openshift.io/serving-cert-secret-name=authorino-server-cert  --overwrite -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
@@ -206,13 +210,13 @@
   when: openshift_platform == "BareMetal" or openshift_platform == "None"
 - name: Patch MaaS default-tenant
   shell: |
-    oc patch tenants.maas.opendatahub.io default-tenant -n models-as-a-service --type merge --patch-file={{ role_path }}/files/default-tenant-patch.json  -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
+    oc patch maastenantconfig.maas.opendatahub.io default-tenant -n models-as-a-service --type merge --patch-file={{ role_path }}/files/default-tenant-patch.json  -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
 - name: Patch Dashboard-Config
   shell: |
     oc patch odhdashboardconfig odh-dashboard-config -n redhat-ods-applications --type=merge --patch-file={{ role_path }}/files/odh-dashboard-config-patch.yaml -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
-- name: Set MAAS API URL in the Dashboard
-  shell: |
-    oc set env deployment/rhods-dashboard --containers='*' MAAS_API_URL=https://maas.{{ openshift_apps_domain }}/maas-api -n redhat-ods-applications -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
+#- name: Set MAAS API URL in the Dashboard
+#  shell: |
+#    oc set env deployment/rhods-dashboard --containers='*' MAAS_API_URL=https://maas.{{ openshift_apps_domain }}/maas-api -n redhat-ods-applications -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
 - name: Check kserve controller deployment
   kubernetes.core.k8s_info:
     api_version: v1 
@@ -246,6 +250,12 @@
 - name: Create MCP servers
   redhat.openshift.k8s:
     template: mcp-servers.yaml.j2
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Create LLM Hosting namespace
+  redhat.openshift.k8s:
+    src: llm-hosting-namespace.yaml
     host: "{{ openshift_api_url }}"
     api_key: "{{ openshift_token }}"
     validate_certs: false

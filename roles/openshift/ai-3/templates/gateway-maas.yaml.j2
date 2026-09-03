@@ -11,22 +11,23 @@ metadata:
   name: maas-default-gateway
   namespace: openshift-ingress
 spec:
-  gatewayClassName: data-science-gateway-class
+  gatewayClassName: openshift-default
   infrastructure:
     parametersRef:
       group: ''
       kind: ConfigMap
       name: maas-gw-options
   listeners:
-    - allowedRoutes:
-        namespaces:
-          from: All
-{% if openshift_platform == "AWS" %}
+    - name: https
       hostname: maas.{{ openshift_apps_domain }}
-{% endif %}
-      name: https
       port: 443
       protocol: HTTPS
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              maas.opendatahub.io/gateway-access: "true"
       tls:
         certificateRefs:
           - group: ""

@@ -1,12 +1,12 @@
-# OpenShift AI 3.x Ansible
+# OpenShift AI 3.x Ansible Installer
 
-This Ansible Playbook provisions Red Hat OpenShift AI on an OpenShift Cluster in AWS.
+This Ansible Playbook provisions Red Hat OpenShift AI on an OpenShift Cluster in AWS or on Baremetal.
 
 ## Preparation
 
 ### Order an OpenShift on AWS environment
 
-On the [Red Hat Demo Platform](https://demo.redhat.com) order an [Red Hat OpenShift Container Platform Cluster (Multi-Cloud)](https://catalog.demo.redhat.com/catalog/all?item=babylon-catalog-prod%2Fpublished.ocp4-cluster.prod) environmment.
+On the [Red Hat Demo Platform](https://demo.redhat.com) order an [Red Hat OpenShift Container Platform Cluster (Multi-Cloud)](https://catalog.demo.redhat.com/catalog/all?item=babylon-catalog-prod%2Fpublished.ocp4-cluster.prod) environmment in version 4.20. Both AWS and CNV are supported.
 
 Once the cluster is provisioned you can get the following information from the **Red Hat Demo Platform**:
 
@@ -42,7 +42,6 @@ Additional Python dependencies need to be installed:
 ```bash
 pip install requests
 pip install kubernetes
-pip install dnspython
 ```
 ## Create vault
 Create a file `group_vars/all/openshift.yaml` for the Openshift credentials and access details
@@ -60,4 +59,8 @@ ansible-vault encrypt group_vars/all/openshift.yaml
 To start the automation, run
 ```bash
 ansible-playbook -vvv --ask-vault-pass -i inventory-ai.yaml playbook-ai-3.yaml 
+```
+or
+```bash
+ansible-playbook -vvv --ask-vault-pass -i inventory-ai.yaml playbook-ai-gateway.yaml 
 ```

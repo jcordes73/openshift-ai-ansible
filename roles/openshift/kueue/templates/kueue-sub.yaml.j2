@@ -4,7 +4,7 @@ metadata:
   name: kueue
   namespace: openshift-kueue-operator
 spec:
-  channel: stable-v1.2
+  channel: {{ kueue_channel }}
   installPlanApproval: Automatic
   name: kueue-operator
   source: redhat-operators
