@@ -208,15 +208,52 @@
     api_key: "{{ openshift_token }}"
     validate_certs: false
   when: openshift_platform == "BareMetal" or openshift_platform == "None"
+- name: Create S3 Bucket for Loki
+  amazon.aws.s3_bucket:
+    access_key: minio
+    secret_key: minio123
+    name: loki
+    endpoint_url: "{{ minio_s3_endpoint }}"
+- name: Set the S3 Access Details
+  set_fact:
+    tempo_s3_endpoint: "{{ minio_s3_endpoint }}"
+    tempo_s3_bucket: "loki"
+    tempo_s3_access_key_id: "minio"
+    tempo_s3_access_key_secret: "minio123"
+- name: Create MinIO secret for Loki
+  redhat.openshift.k8s:
+    src: minio-secret.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Create Loki stack
+  redhat.openshift.k8s:
+    template: lokistack.yaml.j2
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Wait until Loki stack is available
+  kubernetes.core.k8s_info:
+    api_version: loki.grafana.com/v1
+    kind: LokiStack
+    name: usage
+    namespace: redhat-ods-monitoring
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  register: loki_stack
+  until: loki_stack.resources[0].status.conditions is defined and ( loki_stack.resources[0].status.conditions | json_query("[?type=='Ready'].status")  | select("match","True") | list | length == 1)
+  retries: 12
+  delay: 10
+- name: Enable usage-logging
+  shell: |
+    oc patch configs.maas.opendatahub.io default --type merge -p '{"spec":{"usageLogging":true}}' -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
 - name: Patch MaaS default-tenant
   shell: |
     oc patch maastenantconfig.maas.opendatahub.io default-tenant -n models-as-a-service --type merge --patch-file={{ role_path }}/files/default-tenant-patch.json  -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
 - name: Patch Dashboard-Config
   shell: |
     oc patch odhdashboardconfig odh-dashboard-config -n redhat-ods-applications --type=merge --patch-file={{ role_path }}/files/odh-dashboard-config-patch.yaml -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
-#- name: Set MAAS API URL in the Dashboard
-#  shell: |
-#    oc set env deployment/rhods-dashboard --containers='*' MAAS_API_URL=https://maas.{{ openshift_apps_domain }}/maas-api -n redhat-ods-applications -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
 - name: Check kserve controller deployment
   kubernetes.core.k8s_info:
     api_version: v1 

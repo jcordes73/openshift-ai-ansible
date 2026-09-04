@@ -1,0 +1,40 @@
+- name: Include OpenShift Common
+  include_role:
+    name: openshift/common
+    public: true
+- name: Create Loki Subscription
+  redhat.openshift.k8s:
+    src: loki-sub.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Get Loki subscription
+  redhat.openshift.k8s:
+    kind: Subscription
+    api_version: operators.coreos.com/v1alpha1
+    name: loki
+    namespace: openshift-operators
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  register: loki_sub
+  until: loki_sub.result.status.installplan.name is defined
+  retries: 12
+  delay: 10
+- name: Approve InstallPlan
+  shell: |
+    oc patch installplan {{ loki_sub.result.status.installplan.name }} --namespace openshift-operators --type merge --patch '{"spec":{"approved":true}}' -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
+- name: Wait until Loki subscription is "Ready"
+  redhat.openshift.k8s:
+    kind: Subscription
+    api_version: operators.coreos.com/v1alpha1
+    name: loki
+    namespace: openshift-operators
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  register: loki_sub
+  until: loki_sub.result.status.state is defined and (loki_sub.result.status.state == 'AtLatestKnown' or loki_sub.result.status.state == 'UpgradeAvailable')
+  retries: 12
+  delay: 5
+  ignore_errors: yes
