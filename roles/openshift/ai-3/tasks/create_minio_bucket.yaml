@@ -1,0 +1,12 @@
+- name: Create S3 Bucket
+  amazon.aws.s3_bucket:
+    access_key: minio
+    secret_key: minio123
+    name: loki
+    endpoint_url: "{{ minio_s3_endpoint }}"
+- name: Set the S3 Access Details
+  set_fact:
+    loki_s3_endpoint: "{{ minio_s3_endpoint }}"
+    loki_s3_bucket: "loki"
+    loki_s3_access_key_id: "minio"
+    loki_s3_access_key_secret: "minio123"

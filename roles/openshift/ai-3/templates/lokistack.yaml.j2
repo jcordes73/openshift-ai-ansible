@@ -22,7 +22,7 @@ spec:
         version: v13
     secret:
       credentialMode: static
-      name: minio-secret
+      name: loki
       type: s3
 {% if openshift_platform == "AWS" %}
   storageClassName: gp3-csi
