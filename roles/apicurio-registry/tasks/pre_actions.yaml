@@ -1,0 +1,60 @@
+- name: Create apicurio-registry namespace
+  redhat.openshift.k8s:
+    src: namespace.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Create apicurio-registry operator-group
+  redhat.openshift.k8s:
+    src: operator-group.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Create Apicurio Registry Subscription
+  redhat.openshift.k8s:
+    src: apicurio-registry-sub.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Get Apicurio Registry subscription
+  redhat.openshift.k8s:
+    kind: Subscription
+    api_version: operators.coreos.com/v1alpha1
+    name: apicurio-registry
+    namespace: apicurio-registry
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  register: apicurio_registry_sub
+  until: apicurio_registry_sub.result.status.installplan.name is defined
+  retries: 12
+  delay: 10 
+- name: Approve InstallPlan
+  shell: |
+    oc patch installplan {{ apicurio_registry_sub.result.status.installplan.name }} --namespace apicurio-registry --type merge --patch '{"spec":{"approved":true}}' -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
+- name: Wait until Apicurio Registry subscription is "Ready"
+  redhat.openshift.k8s:
+    kind: Subscription
+    api_version: operators.coreos.com/v1alpha1
+    name: apicurio-registry
+    namespace: apicurio-registry
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  register: apicurio_registry_sub
+  until: apicurio_registry_sub.result.status.state is defined and (apicurio_registry_sub.result.status.state == 'AtLatestKnown' or apicurio_registry_sub.result.status.state == 'UpgradeAvailable')
+  retries: 12
+  delay: 10
+- name: Wait for Apicurio Registry Operator deployment
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Deployment
+    name: apicurio-registry-operator-v3.3.1-r1
+    namespace: apicurio-registry
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  register: apicurio_registry_operator_deployment
+  until: apicurio_registry_operator_deployment.resources[0].status is defined and apicurio_registry_operator_deployment.resources[0].status.readyReplicas == 1
+  retries: 12
+  delay: 10 

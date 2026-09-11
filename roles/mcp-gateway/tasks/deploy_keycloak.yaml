@@ -1,0 +1,104 @@
+- name: Create Keycloak subscription
+  redhat.openshift.k8s:
+    src: keycloak-sub.yaml
+    namespace: mcp-gateway
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Wait until Keycloak subscription is "Ready"
+  kubernetes.core.k8s_info:
+    api_version: operators.coreos.com/v1alpha1
+    kind: Subscription
+    name: rhbk-operator
+    namespace: mcp-gateway
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  register: keycloak_sub
+  until: keycloak_sub.resources[0].status.state is defined and (keycloak_sub.resources[0].status.state == 'AtLatestKnown' or keycloak_sub.resources[0].status.state == 'UpgradeAvailable')
+  retries: 12
+  delay: 5
+  ignore_errors: yes
+- name: Wait for RHBK Operator deployment
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Deployment
+    name: rhbk-operator
+    namespace: mcp-gateway
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  register: rhbk_operator_deployment
+  until: rhbk_operator_deployment.resources[0].status is defined and rhbk_operator_deployment.resources[0].status.readyReplicas == 1
+  retries: 12
+  delay: 10
+- name: Create Keycloak MCP DB Secret
+  redhat.openshift.k8s:
+    src: keycloak-db-secret.yaml
+    namespace: mcp-gateway
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Check if Postgres is already deployed
+  kubernetes.core.k8s_info: 
+    api_version: apps.openshift.io/v1
+    kind: DeploymentConfig
+    name: postgres
+    namespace: mcp-gateway
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  register: postgres_deployment
+- name: Deploy Postgres
+  shell: |
+    oc new-app postgresql-persistent --name=postgres -p DATABASE_SERVICE_NAME=postgres -p POSTGRESQL_USER=postgres -p POSTGRESQL_PASSWORD=postgres -p POSTGRESQL_DATABASE=keycloak -p POSTGRESQL_VERSION=13-el8 -p VOLUME_CAPACITY=5Gi -n mcp-gateway -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
+  when: postgres_deployment.resources[0] is not defined
+- name: Wait for newly deployed Postgres
+  kubernetes.core.k8s_info:
+    api_version: apps.openshift.io/v1
+    kind: DeploymentConfig
+    name: postgres
+    namespace: mcp-gateway
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  register: postgres_new_deployment
+  when: postgres_deployment.resources[0].status is undefined
+  until: postgres_new_deployment.resources[0].status.readyReplicas is defined and postgres_new_deployment.resources[0].status.readyReplicas == 1
+  retries: 12
+  delay: 10
+- name: Create Keycloak database schema
+  shell: |
+    cat {{ role_path }}/../postgres/files/create-db.sh | sed 's/DATABASE/keycloak/g' | oc exec dc/postgres -n mcp-gateway -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true -i -t -- bash -il
+  when: postgres_deployment.resources[0].status is undefined
+- name: Check if there is already a Keycloak instance
+  kubernetes.core.k8s_info:
+    api_version: k8s.keycloak.org/v2alpha1
+    kind: Keycloak
+    name: keycloak-mcp
+    namespace: mcp-gateway
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  register: keycloak
+- name: Create Keycloak instance
+  redhat.openshift.k8s:
+    template: keycloak.yaml.j2
+    namespace: mcp-gateway
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  when: keycloak.resources[0].status.instances is undefined
+- name: Check for Keycloak deployment
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: StatefulSet
+    name: keycloak-mcp
+    namespace: mcp-gateway
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  register: rhbk_deployment
+  until: rhbk_deployment.resources[0].status.readyReplicas is defined and rhbk_deployment.resources[0].status.readyReplicas == 1
+  retries: 12
+  delay: 10

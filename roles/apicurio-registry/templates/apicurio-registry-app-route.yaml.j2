@@ -1,0 +1,19 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: apicurio-app-service
+  namespace: apicurio-registry
+  annotations:
+    router.openshift.io/service-ca-certificate: "true"
+spec:
+  host: registry.{{ openshift_apps_domain }}
+  to:
+    kind: Service
+    name: apicurio-app-service
+    weight: 100
+  port:
+    targetPort: 8080
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+

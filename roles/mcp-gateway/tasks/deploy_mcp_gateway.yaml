@@ -12,8 +12,19 @@
     validate_certs: false
 - name: Create MCP Gateway Extension
   redhat.openshift.k8s:
-    src: mcpgateway-extension.yaml
+    src: mcp-gateway-extension.yaml
     host: "{{ openshift_api_url }}"
     api_key: "{{ openshift_token }}"
     validate_certs: false
-
+- name: Create ReferenceGrant
+  redhat.openshift.k8s:
+    src: mcp-gateway-referencegrant.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Create Accept-Header EnvoyFilter
+  redhat.openshift.k8s:
+    src: mcp-gateway-extension-envoyfilter-accept-header.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false

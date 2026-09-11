@@ -1,0 +1,17 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: mcp
+  namespace: mcp-gateway
+spec:
+  host: mcp.{{ openshift_apps_domain }}
+  to:
+    kind: Service
+    name: mcp-gateway-istio
+    weight: 100
+  port:
+    targetPort: 8080
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+

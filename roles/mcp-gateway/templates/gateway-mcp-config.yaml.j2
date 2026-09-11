@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mcp-gw-options
+  namespace: mcp-gateway
+data:
+  deployment: |
+    spec:
+      template:
+        spec:
+          containers:
+          - name: istio-proxy
+            resources:
+              requests:
+                cpu: 100m
+                memory: 256Mi
+              limits:
+                cpu: "2"
+                memory: 2Gi
+  service: |
+    spec:
+      type: {% if openshift_platform == "BareMetal" or openshift_platform == "None" %}ClusterIP{% else %}LoadBalancer{% endif %}

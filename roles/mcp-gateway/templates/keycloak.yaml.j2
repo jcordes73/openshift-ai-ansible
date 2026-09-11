@@ -1,0 +1,31 @@
+apiVersion: k8s.keycloak.org/v2alpha1
+kind: Keycloak
+metadata:
+  name: keycloak-mcp
+  namespace: mcp-gateway
+spec:
+  instances: 1
+  additionalOptions:
+    - name: enable-recovery
+      value: 'true'
+    - name: metrics-enabled
+      value: 'true'
+  db:
+    vendor: postgres
+    host: postgres
+    usernameSecret:
+      key: USERNAME
+      name: keycloak-db-secret
+    passwordSecret:
+      key: PASSWORD
+      name: keycloak-db-secret
+    url: 'jdbc:postgresql://postgres/keycloak'
+    poolInitialSize: 10
+    poolMaxSize: 10
+  hostname:
+    hostname: keycloak-mcp.{{ openshift_apps_domain }}
+  http:
+    httpEnabled: true
+    httpPort: 8080
+  proxy:
+    headers: xforwarded

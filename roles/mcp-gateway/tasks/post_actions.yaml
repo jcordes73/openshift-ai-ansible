@@ -1,0 +1,39 @@
+- name: Enable MCP Lifecycle Operator
+  shell: |
+    oc patch datasciencecluster default-dsc --type=merge --patch '{"spec":{"components":{"mcplifecycleoperator":{"managementState":"Managed"}}}}' -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
+- name: Patch ODH Dashboard for MCP lifecycle
+  shell: |
+    oc patch odhdashboardconfig odh-dashboard-config -n redhat-ods-applications --type=merge -p '{"spec":{"dashboardConfig":{"mcpCatalog":true}}}' -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
+- name: Wait for the MCP Lifecycle Pod
+  redhat.openshift.k8s:
+    kind: Deployment
+    api_version: apps/v1
+    name: mcp-lifecycle-operator-controller-manager
+    namespace: redhat-ods-applications
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  register: mcp_lifecycle
+  until: mcp_lifecycle.result.status.readyReplicas is defined and mcp_lifecycle.result.status.readyReplicas == mcp_lifecycle.result.status.replicas
+  retries: 12
+  delay: 10
+  ignore_errors: yes
+- name: Create MCP Gateway Config
+  redhat.openshift.k8s:
+    template: gateway-mcp-config.yaml.j2
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Create MCP Gateway
+  redhat.openshift.k8s:
+    template: gateway-mcp.yaml.j2
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Create MCP Gateway Route
+  redhat.openshift.k8s:
+    template: gateway-mcp-route.yaml.j2
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  when: openshift_platform == "BareMetal" or openshift_platform == "None"

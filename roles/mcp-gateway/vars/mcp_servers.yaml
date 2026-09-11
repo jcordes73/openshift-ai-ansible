@@ -1,5 +1,0 @@
-mcp_servers:
-- name: camel-mcp-server
-  hostname: camel-mcp-server
-  image: quay.io/telco-coe-emea/camel-mcp-server:latest
-  port: 8080

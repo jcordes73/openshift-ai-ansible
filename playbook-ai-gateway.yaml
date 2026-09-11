@@ -14,4 +14,6 @@
     - openshift/lws
     - connectivity-link
     - openshift/ai-3
-#    - mcp-gateway
+    - openshift/service-mesh-3
+    - mcp-gateway
+    - apicurio-registry

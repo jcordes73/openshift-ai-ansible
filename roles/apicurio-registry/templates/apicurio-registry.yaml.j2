@@ -1,0 +1,55 @@
+apiVersion: registry.apicur.io/v1
+kind: ApicurioRegistry3
+metadata:
+  name: apicurio
+  namespace: apicurio-registry
+spec:
+  app:
+    env:
+      - name: APICURIO_FEATURES_EXPERIMENTAL_ENABLED
+        value: "true"
+      - name: APICURIO_MCP_TOOLS_ENABLED
+        value: "true"
+      - name: APICURIO_UI_FEATURES_AGENTS_ENABLED
+        value: "true
+      - name: APICURIO_A2A_ENABLED
+        value: "true"
+      - name: APICURIO_A2A_CAPABILITIES_PUSH_NOTIFICATIONS
+        value: "true"
+      - name: APICURIO_A2A_CAPABILITIES_STREAMING
+        value: "true"
+      - name: APICURIO_REST_DELETION_ARTIFACT_ENABLED
+        value: "true"
+      - name: APICURIO_REST_DELETION_ARTIFACT_VERSION_ENABLED
+        value: "true"
+      - name: APICURIO_REST_DELETION_GROUP_ENABLED
+        value: "true"
+    storage:
+      type: postgresql
+      sql:
+        dataSource:
+          url: jdbc:postgresql://postgres.apicurio-registry.svc:5432/registry
+          username: postgres
+          password:
+            name: postgresql-credentials
+            key: password
+    auth:
+      enabled: true
+      anonymousReadsEnabled: true
+      appClientId: apicurio-registry
+      uiClientId: apicurio-registry-ui
+      authServerUrl: https://keycloak-mcp.{{ openshift_apps_domain }}/realms/mcp
+      redirectUri: https://registry-ui.{{ openshift_apps_domain }}
+      logoutUrl: https://registry-ui.{{ openshift_apps_domain }}
+      tls:
+        tlsVerificationType: none
+    ingress:
+      enabled: false
+  ui:
+    env:
+      - name: REGISTRY_API_URL
+        value: "https://registry.{{ openshift_apps_domain}}/apis/registry/v3"
+      - name: APICURIO_UI_FEATURES_AGENTS_ENABLED
+        value: "true"
+    ingress:
+      enabled: false

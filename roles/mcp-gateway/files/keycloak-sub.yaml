@@ -1,11 +1,11 @@
 apiVersion: operators.coreos.com/v1alpha1
 kind: Subscription
 metadata:
-  name: servicemeshoperator3
-  namespace: openshift-operators
+  name: rhbk-operator
+  namespace: mcp-gateway
 spec:
-  channel: stable
+  channel: stable-v26
   installPlanApproval: Automatic
-  name: servicemeshoperator3
+  name: rhbk-operator
   source: redhat-operators
   sourceNamespace: openshift-marketplace

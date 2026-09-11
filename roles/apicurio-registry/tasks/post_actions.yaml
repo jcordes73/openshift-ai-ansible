@@ -1,0 +1,14 @@
+- name: Create Apicurio Registry App Route
+  redhat.openshift.k8s:
+    template: apicurio-registry-app-route.yaml.j2
+    namespace: apicurio-registry
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Create Apicurio Registry UI Route
+  redhat.openshift.k8s:
+    template: apicurio-registry-ui-route.yaml.j2
+    namespace: apicurio-registry
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
