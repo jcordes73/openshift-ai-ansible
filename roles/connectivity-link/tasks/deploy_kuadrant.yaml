@@ -9,6 +9,7 @@
     api_version: kuadrant.io/v1beta1
     kind: Kuadrant
     namespace: kuadrant-system
+    name: kuadrant
     host: "{{ openshift_api_url }}"
     api_key: "{{ openshift_token }}"
     validate_certs: false

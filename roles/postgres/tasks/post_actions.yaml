@@ -2,15 +2,15 @@
   kubernetes.core.k8s_info:
     api_version: apps.openshift.io/v1
     kind: DeploymentConfig
-    name: postgres
-    namespace: postgres
+    name: "{{ postgres_name }}"
+    namespace: "{{ postgres_namespace }}"
     host: "{{ openshift_api_url }}"
     api_key: "{{ openshift_token }}"
     validate_certs: false
   register: postgres_deployment 
-  until: postgres_deployment.resources[0].status.readyReplicas is defined and postgres_deployment.resources[0].status.readyReplicas == 1
+  until: postgres_deployment.resources[0] is defined and postgres_deployment.resources[0].status is defined and postgres_deployment.resources[0].status.readyReplicas is defined and postgres_deployment.resources[0].status.readyReplicas == 1
   retries: 12
-  delay: 5
-- name: Set fact for postgres cluster local address
-  set_fact:
-    postgres_address: "postgres.postgres.svc.cluster.local"
+  delay: 10
+- name: Create Postgres database schema
+  shell: |
+    cat {{ role_path }}/files/create-db.sh | sed 's/DATABASE/{{ postgres_database }}/g' | oc exec dc/{{ postgres_name }} -n {{ postgres_namespace }} -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true -i -t -- bash -il

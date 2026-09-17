@@ -1,4 +1,4 @@
-- name: Include Keycloak role
+- name: Include OpenShift Common role
   include_role:
     name: openshift/common
     public: true

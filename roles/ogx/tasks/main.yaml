@@ -1,0 +1,66 @@
+- name: Include OpenShift Common
+  include_role:
+    name: openshift/common
+    public: true
+  when: openshift_token is undefined
+- name: Enable OGX Operator
+  shell: |
+    oc patch datasciencecluster default-dsc --type=merge --patch '{"spec":{"components":{"ogx":{"managementState":"Managed"}}}}' -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
+- name: Wait for the OGX Operator Pod
+  redhat.openshift.k8s:
+    api_version: apps/v1
+    kind: Deployment
+    name: opendatahub-ogx-operator
+    namespace: redhat-ods-applications
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  register: ogx_operator
+  until: ogx_operator.result.status.readyReplicas is defined and ogx_operator.result.status.readyReplicas == ogx_operator.result.status.replicas
+  retries: 24
+  delay: 10
+  ignore_errors: yes
+- name: Create OGX PGVector configmap
+  redhat.openshift.k8s:
+    src: pgvector-init.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Create OGX PGVector PVC
+  redhat.openshift.k8s:
+    src: pvc.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Create OGX PGVector credentials secret
+  redhat.openshift.k8s:
+    src: ogx-pgvector-credentials.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Create OGX PGVector deployment
+  redhat.openshift.k8s:
+    src: pgvector-deployment.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Wait for the OGX Operator Pod
+  redhat.openshift.k8s:
+    api_version: apps/v1
+    kind: Deployment
+    name: ogx-pgvector
+    namespace: llm-hosting
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  register: ogx_pgvector
+  until: ogx_pgvector.result.status.readyReplicas is defined and ogx_pgvector.result.status.readyReplicas == ogx_pgvector.result.status.replicas
+  retries: 24
+  delay: 10
+  ignore_errors: yes
+- name: Create OGX PGVector service
+  redhat.openshift.k8s:
+    src: ogx-pgvector-service.yaml
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false

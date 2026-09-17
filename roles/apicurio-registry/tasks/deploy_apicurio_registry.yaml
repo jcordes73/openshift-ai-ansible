@@ -5,34 +5,13 @@
     host: "{{ openshift_api_url }}"
     api_key: "{{ openshift_token }}"
     validate_certs: false
-- name: Check if Postgres is already deployed
-  kubernetes.core.k8s_info: 
-    api_version: apps.openshift.io/v1
-    kind: DeploymentConfig
+- name: Deploy Apicurio Registry Postgres instance
+  include_role:
     name: postgres
-    namespace: apicurio-registry
-    host: "{{ openshift_api_url }}"
-    api_key: "{{ openshift_token }}"
-    validate_certs: false
-  register: postgres_deployment
-- name: Deploy Postgres
-  shell: |
-    oc new-app postgresql-persistent --name=postgres -p DATABASE_SERVICE_NAME=postgres -p POSTGRESQL_USER=postgres -p POSTGRESQL_PASSWORD=postgres -p POSTGRESQL_DATABASE=keycloak -p POSTGRESQL_VERSION=13-el8 -p VOLUME_CAPACITY=5Gi -n apicurio-registry -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
-  when: postgres_deployment.resources[0] is not defined
-- name: Wait for newly deployed Postgres
-  kubernetes.core.k8s_info:
-    api_version: apps.openshift.io/v1
-    kind: DeploymentConfig
-    name: postgres
-    namespace: apicurio-registry
-    host: "{{ openshift_api_url }}"
-    api_key: "{{ openshift_token }}"
-    validate_certs: false
-  register: postgres_new_deployment
-  when: postgres_deployment.resources[0].status is undefined
-  until: postgres_new_deployment.resources[0].status.readyReplicas is defined and postgres_new_deployment.resources[0].status.readyReplicas == 1
-  retries: 12
-  delay: 10
+  vars:
+    postgres_name: postgres
+    postgres_namespace: apicurio-registry
+    postgres_database: registry
 - name: Create Apicurio Registry database schema
   shell: |
     cat {{ role_path }}/../postgres/files/create-db.sh | sed 's/DATABASE/registry/g' | oc exec dc/postgres -n apicurio-registry -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true -i -t -- bash -il

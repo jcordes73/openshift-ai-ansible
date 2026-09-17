@@ -35,6 +35,19 @@
   retries: 12
   delay: 5
   ignore_errors: yes
+- name: Wait for LWS Operator Deployment
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Deployment
+    name: openshift-lws-operator
+    namespace: openshift-lws-operator
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  register: lws_operator_deployment
+  until: lws_operator_deployment.resources[0].status.readyReplicas is defined and lws_operator_deployment.resources[0].status.readyReplicas == 1
+  retries: 12
+  delay: 10
 - name: Create OpenShift LWS
   redhat.openshift.k8s:
     src: lws.yaml

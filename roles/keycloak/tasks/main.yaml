@@ -1,7 +1,34 @@
+- name: Include OpenShift Common
+  include_role:
+    name: openshift/common
+    public: true
+  when: openshift_token is undefined
+- name: Create Keycloak namspace 
+  redhat.openshift.k8s:
+    template: namespace.yaml.j2
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+- name: Check for existing Operator Group
+  kubernetes.core.k8s_info:
+    api_version: operators.coreos.com/v1
+    kind: OperatorGroup
+    namespace: "{{ keycloak_namespace }}"
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  register: keycloak_operator_group
+- name: Create Keycloak Operator Group
+  redhat.openshift.k8s:
+    template: operator-group.yaml.j2
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  when: keycloak_operator_group.resources[0] is not defined
 - name: Create Keycloak subscription
   redhat.openshift.k8s:
-    src: keycloak-sub.yaml
-    namespace: mcp-gateway
+    template: keycloak-sub.yaml.j2
+    namespace: "{{ keycloak_namespace }}"
     host: "{{ openshift_api_url }}"
     api_key: "{{ openshift_token }}"
     validate_certs: false
@@ -10,7 +37,7 @@
     api_version: operators.coreos.com/v1alpha1
     kind: Subscription
     name: rhbk-operator
-    namespace: mcp-gateway
+    namespace: "{{ keycloak_namespace }}"
     host: "{{ openshift_api_url }}"
     api_key: "{{ openshift_token }}"
     validate_certs: false
@@ -21,62 +48,38 @@
   ignore_errors: yes
 - name: Wait for RHBK Operator deployment
   kubernetes.core.k8s_info:
-    api_version: v1
+    api_version: apps/v1
     kind: Deployment
     name: rhbk-operator
-    namespace: mcp-gateway
+    namespace: "{{ keycloak_namespace }}"
     host: "{{ openshift_api_url }}"
     api_key: "{{ openshift_token }}"
     validate_certs: false
   register: rhbk_operator_deployment
-  until: rhbk_operator_deployment.resources[0].status is defined and rhbk_operator_deployment.resources[0].status.readyReplicas == 1
+  until: rhbk_operator_deployment.resources[0].status is defined and rhbk_operator_deployment.resources[0].status.readyReplicas is defined and rhbk_operator_deployment.resources[0].status.readyReplicas == 1
   retries: 12
   delay: 10
-- name: Create Keycloak MCP DB Secret
+- name: Create Keycloak DB Secret
   redhat.openshift.k8s:
-    src: keycloak-db-secret.yaml
-    namespace: mcp-gateway
+    template: keycloak-db-secret.yaml.j2
+    namespace: "{{ keycloak_namespace }}"
     host: "{{ openshift_api_url }}"
     api_key: "{{ openshift_token }}"
     validate_certs: false
-- name: Check if Postgres is already deployed
-  kubernetes.core.k8s_info: 
-    api_version: apps.openshift.io/v1
-    kind: DeploymentConfig
-    name: postgres
-    namespace: mcp-gateway
-    host: "{{ openshift_api_url }}"
-    api_key: "{{ openshift_token }}"
-    validate_certs: false
-  register: postgres_deployment
 - name: Deploy Postgres
-  shell: |
-    oc new-app postgresql-persistent --name=postgres -p DATABASE_SERVICE_NAME=postgres -p POSTGRESQL_USER=postgres -p POSTGRESQL_PASSWORD=postgres -p POSTGRESQL_DATABASE=keycloak -p POSTGRESQL_VERSION=13-el8 -p VOLUME_CAPACITY=5Gi -n mcp-gateway -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
-  when: postgres_deployment.resources[0] is not defined
-- name: Wait for newly deployed Postgres
-  kubernetes.core.k8s_info:
-    api_version: apps.openshift.io/v1
-    kind: DeploymentConfig
+  include_role:
     name: postgres
-    namespace: mcp-gateway
-    host: "{{ openshift_api_url }}"
-    api_key: "{{ openshift_token }}"
-    validate_certs: false
-  register: postgres_new_deployment
-  when: postgres_deployment.resources[0].status is undefined
-  until: postgres_new_deployment.resources[0].status.readyReplicas is defined and postgres_new_deployment.resources[0].status.readyReplicas == 1
-  retries: 12
-  delay: 10
-- name: Create Keycloak database schema
-  shell: |
-    cat {{ role_path }}/../postgres/files/create-db.sh | sed 's/DATABASE/keycloak/g' | oc exec dc/postgres -n mcp-gateway -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true -i -t -- bash -il
+  vars:
+    postgres_name: "postgres-{{ keycloak_name }}"
+    postgres_namespace: "{{ keycloak_namespace }}"
+    postgres_database: keycloak
   when: postgres_deployment.resources[0].status is undefined
 - name: Check if there is already a Keycloak instance
   kubernetes.core.k8s_info:
     api_version: k8s.keycloak.org/v2alpha1
     kind: Keycloak
-    name: keycloak-mcp
-    namespace: mcp-gateway
+    name: "{{ keycloak_name }}"
+    namespace: "{{ keycloak_namespace }}"
     host: "{{ openshift_api_url }}"
     api_key: "{{ openshift_token }}"
     validate_certs: false
@@ -84,7 +87,7 @@
 - name: Create Keycloak instance
   redhat.openshift.k8s:
     template: keycloak.yaml.j2
-    namespace: mcp-gateway
+    namespace: "{{ keycloak_namespace }}"
     host: "{{ openshift_api_url }}"
     api_key: "{{ openshift_token }}"
     validate_certs: false
@@ -93,8 +96,8 @@
   kubernetes.core.k8s_info:
     api_version: v1
     kind: StatefulSet
-    name: keycloak-mcp
-    namespace: mcp-gateway
+    name: "{{ keycloak_name }}"
+    namespace: "{{ keycloak_namespace }}"
     host: "{{ openshift_api_url }}"
     api_key: "{{ openshift_token }}"
     validate_certs: false

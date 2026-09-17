@@ -2,18 +2,19 @@
   hosts: ai
   connection: local
   roles:
-    - minio
-    - openshift/user-workload-monitoring
-    - openshift/cluster-observability
-    - openshift/tempo
-    - openshift/opentelemetry
-    - loki
-    - nvidia-gpu
-    - openshift/nfd
-    - openshift/kueue
-    - openshift/lws
-    - connectivity-link
-    - openshift/ai-3
-    - openshift/service-mesh-3
-    - mcp-gateway
-    - apicurio-registry
+#    - minio
+#    - openshift/user-workload-monitoring
+#    - openshift/cluster-observability
+#    - openshift/tempo
+#    - openshift/opentelemetry
+#    - loki
+#    - nvidia-gpu
+#    - openshift/nfd
+#    - openshift/kueue
+#    - openshift/lws
+#    - connectivity-link
+#    - openshift/ai-3
+#    - openshift/service-mesh-3
+#    - mcp-gateway
+#    - apicurio-registry
+    - ogx

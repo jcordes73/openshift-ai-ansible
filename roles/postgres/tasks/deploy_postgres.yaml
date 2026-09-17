@@ -2,13 +2,37 @@
   kubernetes.core.k8s_info:
     api_version: apps.openshift.io/v1
     kind: DeploymentConfig
-    name: postgres
-    namespace: postgres
+    name: "{{ postgres_name }}"
+    namespace: "{{ postgres_namespace }}"
     host: "{{ openshift_api_url }}"
     api_key: "{{ openshift_token }}"
     validate_certs: false
   register: postgres_deployment
-- name: Deploy Postgres
-  shell: |
-    oc new-app postgresql-persistent -p DATABASE_SERVICE_NAME=postgres -p POSTGRESQL_USER=postgres -p POSTGRESQL_PASSWORD=postgres -p POSTGRESQL_DATABASE=postgres -p POSTGRESQL_VERSION=13-el8 -p VOLUME_CAPACITY=5Gi -n postgres -s {{ openshift_api_url }} --token {{ openshift_token }} --insecure-skip-tls-verify=true
+- name: Create Postgres PVC
+  redhat.openshift.k8s:
+    template: pvc.yaml.j2
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  when: postgres_deployment.resources[0] is not defined
+- name: Create Postgres Secret
+  redhat.openshift.k8s:
+    template: secret.yaml.j2
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  when: postgres_deployment.resources[0] is not defined
+- name: Create Postgres Service
+  redhat.openshift.k8s:
+    template: service.yaml.j2
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
+  when: postgres_deployment.resources[0] is not defined
+- name: Create Postgres DeploymentConfig
+  redhat.openshift.k8s:
+    template: deploymentconfig.yaml.j2
+    host: "{{ openshift_api_url }}"
+    api_key: "{{ openshift_token }}"
+    validate_certs: false
   when: postgres_deployment.resources[0] is not defined

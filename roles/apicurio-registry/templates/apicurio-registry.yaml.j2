@@ -11,7 +11,7 @@ spec:
       - name: APICURIO_MCP_TOOLS_ENABLED
         value: "true"
       - name: APICURIO_UI_FEATURES_AGENTS_ENABLED
-        value: "true
+        value: "true"
       - name: APICURIO_A2A_ENABLED
         value: "true"
       - name: APICURIO_A2A_CAPABILITIES_PUSH_NOTIFICATIONS
@@ -23,6 +23,12 @@ spec:
       - name: APICURIO_REST_DELETION_ARTIFACT_VERSION_ENABLED
         value: "true"
       - name: APICURIO_REST_DELETION_GROUP_ENABLED
+        value: "true"
+      - name: APICURIO_REST_DRAFT_PRODUCTION_MODE_ENABLED
+        value: "true"
+      - name: APICURIO_REST_MUTABILITY_ARTIFACT_VERSION_CONTENT_ENABLED
+        value: "true"
+      - name: APICURIO_UI_FEATURES_AGENTS_ENABLED
         value: "true"
     storage:
       type: postgresql
@@ -45,11 +51,12 @@ spec:
         tlsVerificationType: none
     ingress:
       enabled: false
+    features:
+      resourceDeleteEnabled: true
+      versionMutabilityEnabled: true
   ui:
     env:
       - name: REGISTRY_API_URL
-        value: "https://registry.{{ openshift_apps_domain}}/apis/registry/v3"
-      - name: APICURIO_UI_FEATURES_AGENTS_ENABLED
-        value: "true"
+        value: "https://registry.{{ openshift_apps_domain }}/apis/registry/v3"
     ingress:
       enabled: false

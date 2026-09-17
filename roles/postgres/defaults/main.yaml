@@ -1,0 +1,5 @@
+postgres_name: postgres
+postgres_namespace: postgres
+postgres_database: postgres
+postgres_username: postgres
+postgres_password: postgres

@@ -15,7 +15,7 @@
     validate_certs: false
   register: mcp_lifecycle
   until: mcp_lifecycle.result.status.readyReplicas is defined and mcp_lifecycle.result.status.readyReplicas == mcp_lifecycle.result.status.replicas
-  retries: 12
+  retries: 24
   delay: 10
   ignore_errors: yes
 - name: Create MCP Gateway Config

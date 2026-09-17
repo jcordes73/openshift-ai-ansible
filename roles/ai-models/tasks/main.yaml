@@ -2,6 +2,7 @@
   include_role:
     name: openshift/common
     public: true
+  when: openshift_token is undefined
 - name: Include AI model configuration
   ansible.builtin.include_vars:
     file: ai_models.yaml

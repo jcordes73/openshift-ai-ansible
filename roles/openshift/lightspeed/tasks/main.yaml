@@ -2,6 +2,7 @@
   include_role:
     name: openshift/common
     public: true
+  when: openshift_token is undefined
 - name: Include OpenShift Lightspeed configuration variables
   ansible.builtin.include_vars:
     file: main.yaml
